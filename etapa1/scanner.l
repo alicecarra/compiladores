@@ -37,7 +37,7 @@ special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
 {digit}+ { return TK_LIT_INT; }
 {digit}*\.{digit}+ { return TK_LIT_FLOAT; }
 
-{alpha} { return TK_IDENTIFICADOR; }
+({alpha}|_)+ { return TK_IDENTIFICADOR; }
 
 {special} { return yytext[0]; }
 
