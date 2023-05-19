@@ -12,7 +12,18 @@ digit [[:digit:]]
 space [ \t\n\r\s]
 special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
 
+%x MULTILINE_COMMENT
+
 %%
+
+
+"/*"                        {BEGIN(MULTILINE_COMMENT);}
+<MULTILINE_COMMENT>.   {}
+
+<MULTILINE_COMMENT>"*/"     {BEGIN(INITIAL);} 
+
+
+(\/\/).* {}
 
 {space} {}
 
