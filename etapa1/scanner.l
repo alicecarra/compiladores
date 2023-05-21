@@ -12,16 +12,16 @@ digit [[:digit:]]
 space [ \t\n\r\s]
 special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
 
-%x MULTILINE_COMMENT
+multiliner_start "/*"
+
+%x MULTILINER
 
 %%
 
-
-"/*"                        {BEGIN(MULTILINE_COMMENT);}
-<MULTILINE_COMMENT>.   {}
-
-<MULTILINE_COMMENT>"*/"     {BEGIN(INITIAL);} 
-
+{multiliner_start} { BEGIN(MULTILINER); }
+<MULTILINER>"*/" { BEGIN(INITIAL); }
+<MULTILINER>\n   { }
+<MULTILINER>.    { }
 
 (\/\/).* {}
 
