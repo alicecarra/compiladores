@@ -12,16 +12,16 @@ digit [[:digit:]]
 space [ \t\n\r\s]
 special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
 
-%x MULTILINE_COMMENT
+multiliner_start "/*"
+
+%x MULTILINER
 
 %%
 
-
-"/*"                        {BEGIN(MULTILINE_COMMENT);}
-<MULTILINE_COMMENT>.   {}
-
-<MULTILINE_COMMENT>"*/"     {BEGIN(INITIAL);} 
-
+{multiliner_start} { BEGIN(MULTILINER); }
+<MULTILINER>"*/" { BEGIN(INITIAL); }
+<MULTILINER>\n   { }
+<MULTILINER>.    { }
 
 (\/\/).* {}
 
@@ -39,8 +39,8 @@ special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
 ">=" { return TK_OC_GE; }
 "==" { return TK_OC_EQ; }
 "!=" { return TK_OC_NE; }
-"&&" { return TK_OC_AND; }
-"||" { return TK_OC_OR; }
+"&" { return TK_OC_AND; }
+"|" { return TK_OC_OR; }
 "->" { return TK_OC_MAP; }
 
 "false" { return TK_LIT_FALSE; }

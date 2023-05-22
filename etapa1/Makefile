@@ -14,6 +14,9 @@ build: main scanner
 run: build
 	./etapa1
 
+test: build
+	./test.sh
+
 clean:
 	rm *.o
 	rm etapa1

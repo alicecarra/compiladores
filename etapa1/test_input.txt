@@ -1,0 +1,23 @@
+// Palavra reservadas
+int float bool if else while return
+
+// Caracteres especiais
+- ! * / % + - < > { } ( ) = , ;
+
+// Operadores compostos
+<= >= == != & | ->
+
+// Identificadores
+foobar foo_bar _foobar foobar__ _ a b c d
+
+/******************
+Comentário multiline!!
+***************/
+/* Multiline em uma linha só (wtff?) */
+/* mais um multiline, ultimo, prometo
+*/
+
+// Literais
+false true 
+47 55555 0 1 2 3 4 6666666666666 4646464646 // int
+0.1 .1 .99999999 4.5 555.0  6565.00001
