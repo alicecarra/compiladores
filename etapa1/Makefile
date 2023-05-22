@@ -21,3 +21,6 @@ clean:
 	rm *.o
 	rm etapa1
 	rm lex.yy.c
+
+entrega: 
+	tar cvzf etapa1.tgz .
