@@ -7,7 +7,7 @@
 %option yylineno
 %option noyywrap
 
-alpha [[:alpha:]]
+lower_char [a-z]
 digit [[:digit:]]
 space [ \t\n\r\s]
 special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
@@ -48,7 +48,7 @@ multiliner_start "/*"
 {digit}+ { return TK_LIT_INT; }
 {digit}*\.{digit}+ { return TK_LIT_FLOAT; }
 
-({alpha}|_)+ { return TK_IDENTIFICADOR; }
+({lower_char}|_)+ { return TK_IDENTIFICADOR; }
 
 {special} { return yytext[0]; }
 
