@@ -3,6 +3,7 @@ int yylex(void);
 void yyerror (char const *s);
 %}
 
+%define parse.error detailed
 %token TK_PR_INT
 %token TK_PR_FLOAT
 %token TK_PR_BOOL
@@ -40,7 +41,7 @@ parameters_list: type TK_IDENTIFICADOR ',' parameters_list | type TK_IDENTIFICAD
 
 function_body: '{' command_block '}' | '{' '}';
 command_block: command_block command | command;
-command: variable ';' | assignment ';' | function_call ';' | return ';' | flow_ctrl | command_block ';' ;
+command: variable ';' | assignment ';' | function_call ';' | return ';' | flow_ctrl ';' | function_body ';' ;
 
 variable : type name_with_value_list ; 
 name_with_value_list: TK_IDENTIFICADOR  TK_OC_LE literal ',' name_with_value_list | TK_IDENTIFICADOR ',' name_with_value_list | TK_IDENTIFICADOR  TK_OC_LE literal  | TK_IDENTIFICADOR;
@@ -68,7 +69,6 @@ expression7: '!' expression8 | '-' expression8 | expression8 ;
 expression8: operand | '(' expression ')';
 
 operand : TK_IDENTIFICADOR | literal | function;
-operators : "-" | "!" | "+" | "*" | "/" | "\%" | TK_OC_AND | TK_OC_OR | TK_OC_EQ | TK_OC_NE | TK_OC_LE | TK_OC_GE ;
 
 literal : TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_FLOAT | TK_LIT_INT;
 type: TK_PR_BOOL | TK_PR_FLOAT | TK_PR_INT;
