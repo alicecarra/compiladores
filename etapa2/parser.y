@@ -56,8 +56,8 @@ return : TK_PR_RETURN expression;
 
 flow_ctrl : if | while;
 
-if: TK_PR_IF '(' expression ')' '{' command_block '}' |  TK_PR_IF '(' expression ')' '{' command_block '}' TK_PR_ELSE '{' command_block '}' ;
-while: TK_PR_WHILE  '(' expression ')' '{' command_block '}';
+if: TK_PR_IF '(' expression ')' function_body |  TK_PR_IF '(' expression ')' function_body TK_PR_ELSE function_body ;
+while: TK_PR_WHILE  '(' expression ')' function_body ; 
 
 expression : expression TK_OC_OR expression2 | expression2;
 expression2: expression2 TK_OC_AND expression3 | expression3;
