@@ -2,18 +2,18 @@ all: build
 
 main: main.c
 	gcc main.c -c
-	gcc utils.c -c -Wno-discarded-qualifiers
+	gcc utils.c -c 
 
-scanner: parser scanner.l
+scanner: scanner.l
 	flex scanner.l
-	gcc lex.yy.c -c
+	gcc -c lex.yy.c 
+	
+bison: parser.y
+	bison -d parser.y 
+	gcc -c parser.tab.c 
 
-parser: parser.y
-	bison -d parser.y
-	gcc parser.tab.c -c
-
-build: parser scanner main 
-	gcc parser.tab.o lex.yy.o main.o utils.o -o etapa2
+build: bison scanner main  
+	gcc lex.yy.o parser.tab.o main.o utils.o -o etapa2
 
 run: build
 	./etapa2
@@ -22,11 +22,10 @@ test: build
 	./test.sh
 
 clean:
-	rm parser.tab.*
-	rm etapa2
 	rm *.o
+	rm etapa2
 	rm lex.yy.c
-
-
+	rm parser.tab.*
+		
 entrega: 
 	tar cvzf etapa2.tgz .

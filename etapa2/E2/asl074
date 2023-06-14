@@ -1,0 +1,7 @@
+//CORRECT
+f(int a, int b)->int
+{
+  int x;
+  int y;
+  f(x, y);
+}

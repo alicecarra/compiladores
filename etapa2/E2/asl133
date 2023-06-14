@@ -1,0 +1,5 @@
+//INCORRECT
+f()->int
+{
+  var<^e> = vet;
+}

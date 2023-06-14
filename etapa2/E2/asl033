@@ -1,0 +1,8 @@
+//CORRECT
+main ()->int
+{
+  int a;
+  int b;
+  a = b & a | a & 43;
+  return 0;
+}
