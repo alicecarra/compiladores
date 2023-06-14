@@ -1,0 +1,6 @@
+//CORRECT
+main()->int
+{
+  int a;
+  a = 2 + 2 != 2 + 2 != 2 + 2;
+}

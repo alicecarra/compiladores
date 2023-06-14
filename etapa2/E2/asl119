@@ -1,0 +1,6 @@
+//INCORRECT
+main()->int
+{
+  if (1)
+    x = 2;
+}

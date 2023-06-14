@@ -1,0 +1,5 @@
+//INCORRECT
+f ()->int
+{
+  int v<100>;
+}

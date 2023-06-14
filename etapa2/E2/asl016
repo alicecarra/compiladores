@@ -1,0 +1,5 @@
+//CORRECT
+main ()->int
+{
+  if (true) { {}; {}; };
+}

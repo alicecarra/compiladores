@@ -1,0 +1,6 @@
+//CORRECT
+f()->int
+{
+  int c;
+  if (c) { };
+}
