@@ -1,55 +1,49 @@
-%{
-#include "parser.tab.h"
-%}
-
-%option yylineno
-%option noyywrap
-
-lower_char [a-z]
-digit [[:digit:]]
-space [ \t\n\r\s]
-special [\-\!\*\/\%\+\-\<\>\{\}\(\)\=\,\;]
-
-multiliner_start "/*"
-
-%x MULTILINER
-
 %%
 
-{multiliner_start} { BEGIN(MULTILINER); }
-<MULTILINER>"*/" { BEGIN(INITIAL); }
-<MULTILINER>\n   { }
-<MULTILINER>.    { }
+(?s)/\*.*?\*/ ;
 
-(\/\/).* {}
+(?-s)//.* ;
+[ \t\n\r\s] ;
 
-{space} {}
+int "TK_PR_INT"
+float "TK_PR_FLOAT"
+bool "TK_PR_BOOL"
+if "TK_PR_IF"
+else "TK_PR_ELSE"
+while "TK_PR_WHILE"
+return "TK_PR_RETURN"
 
-"int" { return TK_PR_INT; }
-"float" { return TK_PR_FLOAT; }
-"bool" { return TK_PR_BOOL; }
-"if" { return TK_PR_IF; }
-"else" { return TK_PR_ELSE; }
-"while" { return TK_PR_WHILE; }
-"return" { return TK_PR_RETURN; }
+\<\= "TK_OC_LE"
+>= "TK_OC_GE"
+== "TK_OC_EQ"
+!= "TK_OC_NE"
+&  "TK_OC_AND"
+\| "TK_OC_OR"
+-> "TK_OC_MAP"
 
-"<=" { return TK_OC_LE; }
-">=" { return TK_OC_GE; }
-"==" { return TK_OC_EQ; }
-"!=" { return TK_OC_NE; }
-"&" { return TK_OC_AND; }
-"|" { return TK_OC_OR; }
-"->" { return TK_OC_MAP; }
+false "TK_LIT_FALSE"
+true "TK_LIT_TRUE"
+[0-9]+ "TK_LIT_INT"
+[0-9]*\.[0-9]+ "TK_LIT_FLOAT"
 
-"false" { return TK_LIT_FALSE; }
-"true" { return TK_LIT_TRUE; }
-{digit}+ { return TK_LIT_INT; }
-{digit}*\.{digit}+ { return TK_LIT_FLOAT; }
+([a-z]|_)+ "TK_IDENTIFICADOR"
 
-({lower_char}|_)+ { return TK_IDENTIFICADOR; }
+[\,] ","
+[\;] ";"
+[\=] "="
+[\(] "("
+[\)] ")"
+[\{] "{"
+[\}] "}"
+[\-] "-"
+[\!] "!"
+[\*] "*"
+[\/] "/"
+[\%] "%"
+[\+] "+"
+[\<] "<"
+[\>] ">"
 
-{special} { return yytext[0]; }
+. "TK_ERRO"
 
-. { return TK_ERRO; }
 
-%%

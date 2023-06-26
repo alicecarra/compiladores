@@ -88,6 +88,7 @@ dependencies = [
 name = "etapa3"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cfgrammar",
  "lrlex",
  "lrpar",

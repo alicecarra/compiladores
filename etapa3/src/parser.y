@@ -2,51 +2,156 @@
 
 %%
 
-program->;
-item_list ->;
+program-> Result<ASTNode, anyhow::Error>:
+        item_list { $1 } |
+        { Ok(ASTNode::None) } ;
+item_list -> Result<ASTNode, anyhow::Error>:
+        item_list function {
+                match $2? {
+                        ASTNode::FunctionDeclaration(mut node) => {
+                                let next_fn = Box::new($2?);
+                                node.add_next_fn(next_fn);
+                                Ok(ASTNode::FunctionDeclaration(node))
+                        }
+                        _ => bail!("Segundo elemento da produção incorreto."),
+                }
+        }|
+        item_list global_variable { $1 } |
+        function  { $1 }|
+        global_variable { $1 };
 
-global_variable ->; 
-name_list ->;
+global_variable -> Result<ASTNode, anyhow::Error>:
+        type name_list ';' {  Ok(ASTNode::None) };
+name_list -> Result<ASTNode, anyhow::Error>:
+        "TK_IDENTIFICADOR" ',' name_list  { Ok(ASTNode::None) }|
+        "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
 
-function ->;
-function_header->;
+function -> Result<ASTNode, anyhow::Error>:
+        "TK_IDENTIFICADOR" parameters "TK_OC_MAP" type function_body  {
+                let ident = $1?;
+                let command = Box::new($5?);
+                let node = FunctionDeclaration::new($span, command, ident.span()?);
+                Ok(ASTNode::FunctionDeclaration(node))
+        } ;
 
-parameters->;
-parameters_list->;
+parameters-> Result<ASTNode, anyhow::Error>:
+        '(' parameters_list ')' { Ok(ASTNode::None) } |
+        '(' ')' { Ok(ASTNode::None) };
+parameters_list-> Result<ASTNode, anyhow::Error>:
+        type "TK_IDENTIFICADOR" ',' parameters_list { Ok(ASTNode::None) }| 
+        type "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
 
-function_body->;
-command_block->;
-command->;
+function_body-> Result<ASTNode, anyhow::Error>:
+        '{' command_block '}' { $2 } |
+        '{' '}' { Ok(ASTNode::None) };
+command_block-> Result<ASTNode, anyhow::Error>:
+        command_block command {
+                let command = $1?;
+                match command {
+                        ASTNode::None => $2,
+                        _ => {
+                                let next = Box::new($2?);
+                                let node = command.add_next(next)?;
+                                Ok(node)
+                        },
+                }
+        }|
+        command { $1 };
+command-> Result<ASTNode, anyhow::Error>:
+        variable ';' { $1 } | 
+        assignment ';' { $1 } | 
+        function_call ';'  { $1 }| 
+        return ';'  { $1 }| 
+        flow_ctrl ';'  { $1 }| 
+        function_body ';'  { $1 };
 
-variable ->; 
-name_with_value_list->;
+variable ->     Result<ASTNode, anyhow::Error>:
+        type "TK_IDENTIFICADOR" ',' name_with_value_list { Ok(ASTNode::None) } |
+        type "TK_IDENTIFICADOR" "TK_OC_LE" literal ',' name_with_value_list {
+                let ident = Box::new($2?);
+                let lit = Box::new($4?);
+                let next = Some(Box::new($6?));
+                let node = InitializedVariable::new($span, ident, lit, next);
+                Ok(ASTNode::InitializedVariable(node))
+        } |
+        type "TK_IDENTIFICADOR" { Ok(ASTNode::None) } |
+        type "TK_IDENTIFICADOR" "TK_OC_LE" literal {
+                let ident = Box::new($2?);
+                let lit = Box::new($4?);
+                let node = InitializedVariable::new($span, ident, lit, None);
+                Ok(ASTNode::InitializedVariable(node))
+        } ;
+name_with_value_list-> Result<ASTNode, anyhow::Error>:
+        "TK_IDENTIFICADOR"  "TK_OC_LE" literal ',' name_with_value_list {
+                let ident = Box::new($1?);
+                let lit = Box::new($3?);
+                let next = Some(Box::new($5?));
+                let node = InitializedVariable::new($span, ident, lit, next);
+                Ok(ASTNode::InitializedVariable(node))
+        }|
+        "TK_IDENTIFICADOR"  "TK_OC_LE" literal {
+                let ident = Box::new($1?);
+                let lit = Box::new($3?);
+                let node = InitializedVariable::new($span, ident, lit, None);
+                Ok(ASTNode::InitializedVariable(node))
+        } | 
+        "TK_IDENTIFICADOR" ',' name_with_value_list { $3 }  | 
+        "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
 
-assignment->;
+assignment-> Result<ASTNode, anyhow::Error>:
+        "TK_IDENTIFICADOR" '=' expression { 
+                let ident = Box::new($1?);
+                let expression = Box::new($3?);
+                let node = AssignmentCommand::new($span, ident, expression);
+                Ok(ASTNode::AssignmentCommand(node))
+        };
 
-function_call ->;
-arguments->;
-arguments_list->;
+function_call -> Result<ASTNode, anyhow::Error>:
+        "TK_IDENTIFICADOR" arguments {
+                let expression = Box::new($2?);
+                let ident = $1?;
+                let node = FunctionCallCommand::new($span, expression, ident.span()?);
+                Ok(ASTNode::FunctionCallCommand(node))
+        };
+arguments-> Result<ASTNode, anyhow::Error>:
+        '(' arguments_list ')'{ $2 }
+        | '(' ')' { Ok(ASTNode::None) };
+arguments_list-> Result<ASTNode, anyhow::Error>:
+        expression ',' arguments_list {
+                let expression = $1?;
+                let next = Box::new($3?);
+                let node = expression.add_next(next)?;
+                Ok(node)
+        } |
+        expression  { $1 } ;
 
-return ->;
+return ->       Result<ASTNode, anyhow::Error>:
+        "TK_PR_RETURN" expression  {
+                let expr = Box::new($2?);
+                let node = ReturnCommand::new($span, expr);
+                Ok(ASTNode::ReturnCommand(node))
+        } ;
 
-flow_ctrl ->;
+flow_ctrl ->    Result<ASTNode, anyhow::Error>:
+        if       { $1 } |
+        while    { $1 } ;
 
 if->    Result<ASTNode, anyhow::Error>:
-        TK_PR_IF '(' expression ')' function_body {
+        "TK_PR_IF" '(' expression ')' function_body {
             let expr = Box::new($3?);
-            let true_command = Box::new($6?);
+            let true_command = Box::new($5?);
             let node = IfCommand::new($span, expr, true_command, Box::new(ASTNode::None));
             Ok(ASTNode::IfCommand(node))
          }|  
-        TK_PR_IF '(' expression ')' function_body TK_PR_ELSE function_body {
+        "TK_PR_IF" '(' expression ')' function_body "TK_PR_ELSE" function_body {
             let expr = Box::new($3?);
-            let true_command = Box::new($6?);
-            let false_command = Box::new($8?);
+            let true_command = Box::new($5?);
+            let false_command = Box::new($7?);
             let node = IfCommand::new($span, expr, true_command, false_command);
             Ok(ASTNode::IfCommand(node))
         };
 while-> Result<ASTNode, anyhow::Error>:
-        TK_PR_WHILE  '(' expression ')' function_body{
+        "TK_PR_WHILE"  '(' expression ')' function_body{
             let expr = Box::new($3?);
             let command = Box::new($5?);
             let node = WhileCommand::new($span, expr, command);
@@ -168,26 +273,30 @@ identifier -> Result<ASTNode, anyhow::Error>:
 
 literal -> Result<ASTNode, anyhow::Error>:
         "TK_LIT_INT"      { Ok(ASTNode::LiteralInt(LiteralInt::new($span))) } |
-        "TK_LIT_FLOAT"    { Ok(ASTNode::LiteralFloat(LiteralFloat::new($span))) } |
-        "TK_LIT_CHAR"     { Ok(ASTNode::LiteralChar(LiteralChar::new($span))) } |
+        "TK_LIT_FLOAT"    { Ok(ASTNode::LiteralFloat(LiteralFloat::new($span))) } |       
         "TK_LIT_TRUE"     { Ok(ASTNode::LiteralBool(LiteralBool::new($span))) } |
         "TK_LIT_FALSE"    { Ok(ASTNode::LiteralBool(LiteralBool::new($span))) } ;
 
 type-> Result<ASTNode, anyhow::Error>:
         "TK_PR_INT" { Ok(ASTNode::None) } |
         "TK_PR_FLOAT" { Ok(ASTNode::None) } |
-        "TK_PR_BOOL" { Ok(ASTNode::None) } |
-        "TK_PR_CHAR"  { Ok(ASTNode::None) } ;
+        "TK_PR_BOOL" { Ok(ASTNode::None) } ;
 
 %%
 
 use etapa3::ast::{
+        InitializedVariable,
+        AssignmentCommand,
+        FunctionCallCommand,
+        ReturnCommand,
         ASTNode,   
         BinaryOperation,
         UnaryOperation,
-        LitInt,
-        LitFloat,
-        LitChar,
-        LitBool,
+        IfCommand,
+        WhileCommand,
+        FunctionDeclaration,   
+        LiteralInt,
+        LiteralFloat,      
+        LiteralBool,
         Identifier};
 use anyhow::bail;
