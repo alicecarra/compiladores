@@ -9,25 +9,25 @@ item_list -> Result<ASTNode, anyhow::Error>:
         item_list function {
                 match $2? {
                         ASTNode::FunctionDeclaration(mut node) => {
-                                let next_fn = Box::new($2?);
+                                let next_fn = Box::new($1?);
                                 node.add_next_fn(next_fn);
                                 Ok(ASTNode::FunctionDeclaration(node))
                         }
                         _ => bail!("Segundo elemento da produção incorreto."),
                 }
         }|
-        item_list global_variable { $1 } |
+        item_list global_variable  { $1 } |
         function  { $1 }|
         global_variable { $1 };
 
 global_variable -> Result<ASTNode, anyhow::Error>:
         type name_list ';' {  Ok(ASTNode::None) };
 name_list -> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR" ',' name_list  { Ok(ASTNode::None) }|
-        "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
+        identifier ',' name_list  { Ok(ASTNode::None) }|
+        identifier { Ok(ASTNode::None) };
 
 function -> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR" parameters "TK_OC_MAP" type function_body  {
+        identifier parameters "TK_OC_MAP" type function_body  {
                 let ident = $1?;
                 let command = Box::new($5?);
                 let node = FunctionDeclaration::new($span, command, ident.span()?);
@@ -38,8 +38,8 @@ parameters-> Result<ASTNode, anyhow::Error>:
         '(' parameters_list ')' { Ok(ASTNode::None) } |
         '(' ')' { Ok(ASTNode::None) };
 parameters_list-> Result<ASTNode, anyhow::Error>:
-        type "TK_IDENTIFICADOR" ',' parameters_list { Ok(ASTNode::None) }| 
-        type "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
+        type identifier ',' parameters_list { Ok(ASTNode::None) }| 
+        type identifier { Ok(ASTNode::None) };
 
 function_body-> Result<ASTNode, anyhow::Error>:
         '{' command_block '}' { $2 } |
@@ -66,40 +66,40 @@ command-> Result<ASTNode, anyhow::Error>:
         function_body ';'  { $1 };
 
 variable ->     Result<ASTNode, anyhow::Error>:
-        type "TK_IDENTIFICADOR" ',' name_with_value_list { Ok(ASTNode::None) } |
-        type "TK_IDENTIFICADOR" "TK_OC_LE" literal ',' name_with_value_list {
+        type identifier ',' name_with_value_list { Ok(ASTNode::None) } |
+        type identifier "TK_OC_LE" literal ',' name_with_value_list {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
                 let next = Some(Box::new($6?));
                 let node = InitializedVariable::new($span, ident, lit, next);
                 Ok(ASTNode::InitializedVariable(node))
         } |
-        type "TK_IDENTIFICADOR" { Ok(ASTNode::None) } |
-        type "TK_IDENTIFICADOR" "TK_OC_LE" literal {
+        type identifier { Ok(ASTNode::None) } |
+        type identifier "TK_OC_LE" literal {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
                 let node = InitializedVariable::new($span, ident, lit, None);
                 Ok(ASTNode::InitializedVariable(node))
         } ;
 name_with_value_list-> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR"  "TK_OC_LE" literal ',' name_with_value_list {
+        identifier  "TK_OC_LE" literal ',' name_with_value_list {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
                 let next = Some(Box::new($5?));
                 let node = InitializedVariable::new($span, ident, lit, next);
                 Ok(ASTNode::InitializedVariable(node))
         }|
-        "TK_IDENTIFICADOR"  "TK_OC_LE" literal {
+        identifier  "TK_OC_LE" literal {
                 let ident = Box::new($1?);
                 let lit = Box::new($3?);
                 let node = InitializedVariable::new($span, ident, lit, None);
                 Ok(ASTNode::InitializedVariable(node))
         } | 
-        "TK_IDENTIFICADOR" ',' name_with_value_list { $3 }  | 
-        "TK_IDENTIFICADOR" { Ok(ASTNode::None) };
+        identifier ',' name_with_value_list { $3 }  | 
+        identifier { Ok(ASTNode::None) };
 
 assignment-> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR" '=' expression { 
+        identifier '=' expression { 
                 let ident = Box::new($1?);
                 let expression = Box::new($3?);
                 let node = AssignmentCommand::new($span, ident, expression);
@@ -107,7 +107,7 @@ assignment-> Result<ASTNode, anyhow::Error>:
         };
 
 function_call -> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR" arguments {
+        identifier arguments {
                 let expression = Box::new($2?);
                 let ident = $1?;
                 let node = FunctionCallCommand::new($span, expression, ident.span()?);
