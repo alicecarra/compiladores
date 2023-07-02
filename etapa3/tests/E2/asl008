@@ -1,0 +1,4 @@
+//INCORRECT
+main()->int{
+   a = (( b * 1) + c) or 1;
+}

@@ -1,0 +1,8 @@
+//CORRECT
+f()->int
+{
+  if (c)
+	 {
+	 }else{
+  };
+}

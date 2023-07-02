@@ -1,0 +1,6 @@
+//CORRECT
+main ()->int
+{
+  bool a <= true;
+  return 0;
+}

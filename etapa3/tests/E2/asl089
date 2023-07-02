@@ -1,0 +1,5 @@
+//INCORRECT
+f()->int
+{
+  c<5> = a[2*c+k];
+}

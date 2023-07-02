@@ -1,0 +1,7 @@
+//INCORRECT
+main ()->int
+{
+  int a;
+  a = 'c';
+  return 0;
+}

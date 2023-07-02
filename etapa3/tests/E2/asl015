@@ -1,0 +1,7 @@
+//CORRECT
+main ()->int
+{
+  int a;
+  a = 12 & 1;
+  return 0;
+}

@@ -1,0 +1,4 @@
+//INCORRECT
+main() -> int {
+  int a, b,;
+}

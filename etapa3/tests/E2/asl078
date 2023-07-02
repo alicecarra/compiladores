@@ -1,0 +1,6 @@
+//INCORRECT
+f()->int
+{
+  int x;
+  x >> 4;
+}

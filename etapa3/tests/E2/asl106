@@ -1,0 +1,5 @@
+//CORRECT
+func(bool param)->int
+{
+  return 0;
+}

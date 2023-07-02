@@ -1,0 +1,5 @@
+//INCORRECT
+f()->int
+{
+  string a;
+}
