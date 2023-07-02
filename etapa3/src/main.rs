@@ -34,6 +34,6 @@ fn main() {
     }
 
     let tree = tree.unwrap().unwrap();
-    println!("{:#?}", tree);
+    // println!("{:#?}", tree);
     tree.print(&lexer);
 }
