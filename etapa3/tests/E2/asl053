@@ -1,0 +1,4 @@
+//CORRECT
+f (int a, int b)->int
+{
+}

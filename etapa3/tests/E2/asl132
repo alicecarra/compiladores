@@ -1,0 +1,5 @@
+//INCORRECT
+f()->int
+{
+  var<c+d^e> = vet[5*t^true];
+}

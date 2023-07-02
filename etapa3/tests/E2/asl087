@@ -1,0 +1,8 @@
+//CORRECT
+f()->int
+{
+  int a;
+  int b;
+  int c;
+  a = 2*c+a/b;
+}
