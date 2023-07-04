@@ -7,17 +7,17 @@ program-> Result<ASTNode, anyhow::Error>:
         { Ok(ASTNode::None) } ;
 
 item_list -> Result<ASTNode, anyhow::Error>:
-        item_list function {
-                match $2? {
+        function item_list  {
+                match $1? {
                         ASTNode::FunctionDeclaration(mut node) => {
-                                let next_fn = Box::new($1?);
+                                let next_fn = Box::new($2?);
                                 node.add_next_fn(next_fn);
                                 Ok(ASTNode::FunctionDeclaration(node))
                         }
                         _ => bail!("Segundo elemento da produção incorreto."),
                 }
         }|
-        item_list global_variable  { $1 } |
+        global_variable item_list { $2 } |
         function  { $1 }|
         global_variable { $1 };
 
@@ -272,7 +272,7 @@ expression7-> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::NegateExpression(node))
         } |
         expression8  { $1 } ;
-        
+
 expression8-> Result<ASTNode, anyhow::Error>:
         '(' expression ')'    { $2 } |
         operand         { $1 } ;
