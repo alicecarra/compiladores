@@ -5,6 +5,7 @@
 program-> Result<ASTNode, anyhow::Error>:
         item_list { $1 } |
         { Ok(ASTNode::None) } ;
+
 item_list -> Result<ASTNode, anyhow::Error>:
         item_list function {
                 match $2? {
@@ -22,6 +23,7 @@ item_list -> Result<ASTNode, anyhow::Error>:
 
 global_variable -> Result<ASTNode, anyhow::Error>:
         type name_list ';' {  Ok(ASTNode::None) };
+
 name_list -> Result<ASTNode, anyhow::Error>:
         identifier ',' name_list  { Ok(ASTNode::None) }|
         identifier { Ok(ASTNode::None) };
@@ -37,6 +39,7 @@ function -> Result<ASTNode, anyhow::Error>:
 parameters-> Result<ASTNode, anyhow::Error>:
         '(' parameters_list ')' { Ok(ASTNode::None) } |
         '(' ')' { Ok(ASTNode::None) };
+
 parameters_list-> Result<ASTNode, anyhow::Error>:
         type identifier ',' parameters_list { Ok(ASTNode::None) }| 
         type identifier { Ok(ASTNode::None) };
@@ -44,8 +47,9 @@ parameters_list-> Result<ASTNode, anyhow::Error>:
 function_body-> Result<ASTNode, anyhow::Error>:
         '{' command_block '}' { $2 } |
         '{' '}' { Ok(ASTNode::None) };
+
 command_block-> Result<ASTNode, anyhow::Error>:
-        command_block command {
+        command command_block{
                 let command = $1?;
                 match command {
                         ASTNode::None => $2,
@@ -57,6 +61,7 @@ command_block-> Result<ASTNode, anyhow::Error>:
                 }
         }|
         command { $1 };
+
 command-> Result<ASTNode, anyhow::Error>:
         variable ';' { $1 } | 
         assignment ';' { $1 } | 
@@ -116,6 +121,7 @@ function_call -> Result<ASTNode, anyhow::Error>:
 arguments-> Result<ASTNode, anyhow::Error>:
         '(' arguments_list ')'{ $2 }
         | '(' ')' { Ok(ASTNode::None) };
+
 arguments_list-> Result<ASTNode, anyhow::Error>:
         expression ',' arguments_list {
                 let expression = $1?;
@@ -166,6 +172,7 @@ expression -> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::OrExpression(node))
         } |
         expression2  { $1 } ;
+
 expression2-> Result<ASTNode, anyhow::Error>:
         expression2 "TK_OC_AND" expression3 {
                 let child_left = Box::new($1?);
@@ -174,6 +181,7 @@ expression2-> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::AndExpression(node))
         } |
         expression3  { $1 } ;
+
 expression3->  Result<ASTNode, anyhow::Error>:
         expression3 "TK_OC_EQ" expression4 {
                 let child_left = Box::new($1?);
@@ -188,6 +196,7 @@ expression3->  Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::NotEqualExpression(node))
         } |
         expression4  { $1 } ;
+
 expression4-> Result<ASTNode, anyhow::Error>:
         expression4 '<' expression5 {
                 let child_left = Box::new($1?);
@@ -214,6 +223,7 @@ expression4-> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::GreaterEqualExpression(node))
          } |
         expression5  { $1 } ;
+
 expression5->  Result<ASTNode, anyhow::Error>:
         expression5 '+' expression6 {
                 let child_left = Box::new($1?);
@@ -228,6 +238,7 @@ expression5->  Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::SubtractionExpression(node))
          } |
         expression6  { $1 } ;
+
 expression6-> Result<ASTNode, anyhow::Error>:
         expression6 '*' expression7 {
                 let child_left = Box::new($1?);
@@ -248,6 +259,7 @@ expression6-> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::ModExpression(node))
         } |
         expression7  { $1 } ;
+
 expression7-> Result<ASTNode, anyhow::Error>:
         '-' expression8 {
                 let child = Box::new($2?);
@@ -260,6 +272,7 @@ expression7-> Result<ASTNode, anyhow::Error>:
                 Ok(ASTNode::NegateExpression(node))
         } |
         expression8  { $1 } ;
+        
 expression8-> Result<ASTNode, anyhow::Error>:
         '(' expression ')'    { $2 } |
         operand         { $1 } ;
