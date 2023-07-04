@@ -578,13 +578,15 @@ impl UnaryOperation {
 #[derive(Debug, PartialEq, Clone)]
 pub struct LiteralInt {
     pub span: Span,
+    pub line: usize,
     pub next: Box<ASTNode>,
 }
 
 impl LiteralInt {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, line: usize) -> Self {
         Self {
             span,
+            line,
             next: Box::new(ASTNode::None),
         }
     }
@@ -596,14 +598,16 @@ impl LiteralInt {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct LiteralFloat {
+    pub line: usize,
     pub span: Span,
     pub next: Box<ASTNode>,
 }
 
 impl LiteralFloat {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, line: usize) -> Self {
         Self {
             span,
+            line,
             next: Box::new(ASTNode::None),
         }
     }
@@ -616,13 +620,15 @@ impl LiteralFloat {
 #[derive(Debug, PartialEq, Clone)]
 pub struct LiteralBool {
     pub span: Span,
+    pub line: usize,
     pub next: Box<ASTNode>,
 }
 
 impl LiteralBool {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, line: usize) -> Self {
         Self {
             span,
+            line,
             next: Box::new(ASTNode::None),
         }
     }
@@ -635,13 +641,15 @@ impl LiteralBool {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
     pub span: Span,
+    pub line: usize,
     pub next: Box<ASTNode>,
 }
 
 impl Identifier {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, line: usize) -> Self {
         Self {
             span,
+            line,
             next: Box::new(ASTNode::None),
         }
     }

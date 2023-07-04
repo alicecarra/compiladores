@@ -119,7 +119,7 @@ function_call -> Result<ASTNode, anyhow::Error>:
                 let node = FunctionCallCommand::new($span, expression, ident.span()?);
                 Ok(ASTNode::FunctionCallCommand(node))
         };
-        
+
 arguments-> Result<ASTNode, anyhow::Error>:
         '(' arguments_list ')'{ $2 }
         | '(' ')' { Ok(ASTNode::None) };
@@ -284,13 +284,23 @@ operand -> Result<ASTNode, anyhow::Error>:
         literal         { $1 } ;
 
 identifier -> Result<ASTNode, anyhow::Error>:
-        "TK_IDENTIFICADOR" { Ok(ASTNode::Identifier(Identifier::new($span)))} ;
+        "TK_IDENTIFICADOR" { 
+                                let ((line,_), _) = $lexer.line_col($span);    
+                                Ok(ASTNode::Identifier(Identifier::new($span,line)))} ;
 
 literal -> Result<ASTNode, anyhow::Error>:
-        "TK_LIT_INT"      { Ok(ASTNode::LiteralInt(LiteralInt::new($span))) } |
-        "TK_LIT_FLOAT"    { Ok(ASTNode::LiteralFloat(LiteralFloat::new($span))) } |       
-        "TK_LIT_TRUE"     { Ok(ASTNode::LiteralBool(LiteralBool::new($span))) } |
-        "TK_LIT_FALSE"    { Ok(ASTNode::LiteralBool(LiteralBool::new($span))) } ;
+        "TK_LIT_INT"      { 
+                                let ((line,_), _) = $lexer.line_col($span);    
+                                Ok(ASTNode::LiteralInt(LiteralInt::new($span,line))) } |
+        "TK_LIT_FLOAT"    { 
+                                let ((line,_), _) = $lexer.line_col($span);                                
+                                Ok(ASTNode::LiteralFloat(LiteralFloat::new($span,line))) } |       
+        "TK_LIT_TRUE"     { 
+                                let ((line,_), _) = $lexer.line_col($span);    
+                                Ok(ASTNode::LiteralBool(LiteralBool::new($span,line))) } |
+        "TK_LIT_FALSE"    { 
+                                let ((line,_), _) = $lexer.line_col($span);    
+                                Ok(ASTNode::LiteralBool(LiteralBool::new($span,line))) } ;
 
 type-> Result<ASTNode, anyhow::Error>:
         "TK_PR_INT" { Ok(ASTNode::None) } |
