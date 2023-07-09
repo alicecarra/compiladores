@@ -22,9 +22,22 @@ mod test {
 
             let lexerdef = scanner_l::lexerdef();
             let lexer = lexerdef.lexer(&input);
-            let (_, errors) = parser_y::parse(&lexer);
+            let (_tree, errors) = parser_y::parse(&lexer);
 
             assert_eq!(input.contains("INCORRECT"), !errors.is_empty());
+
+            // if let Some(tree) = _tree {
+            //     if let Ok(tree) = tree {
+            //         println!("\n == {} ==", input_file_name);
+            //         println!("{input}");
+            //         if !errors.is_empty() {
+            //             for err in errors {
+            //                 eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
+            //             }
+            //         }
+            //         tree.print(&lexer);
+            //     }
+            // }
         }
     }
 }
