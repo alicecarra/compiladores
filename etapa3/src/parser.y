@@ -71,7 +71,7 @@ command-> Result<ASTNode, anyhow::Error>:
         function_body ';'  { $1 };
 
 variable ->     Result<ASTNode, anyhow::Error>:
-        type identifier ',' name_with_value_list { Ok(ASTNode::None) } |
+        type identifier ',' name_with_value_list { $4 } |
         type identifier "TK_OC_LE" literal ',' name_with_value_list {
                 let ident = Box::new($2?);
                 let lit = Box::new($4?);
