@@ -32,4 +32,7 @@
 *.app
 
 *tgz
+etapa4
 target/
+saida*
+output2dot.sh

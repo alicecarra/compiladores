@@ -281,6 +281,7 @@ expression8-> Result<ASTNode, anyhow::Error>:
 
 operand -> Result<ASTNode, anyhow::Error>:
         identifier      { $1 } |        
+        function_call   { $1 } |  
         literal         { $1 } ;
 
 identifier -> Result<ASTNode, anyhow::Error>:
@@ -309,7 +310,7 @@ type-> Result<ASTNode, anyhow::Error>:
 
 %%
 
-use etapa3::ast::{
+use etapa4::ast::{
         InitializedVariable,
         AssignmentCommand,
         FunctionCallCommand,
