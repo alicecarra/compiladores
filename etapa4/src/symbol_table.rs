@@ -4,7 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::errors::ParsingError;
+use crate::{errors::ParsingError, type_enum::Type, untyped::UntypedVar};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -12,26 +12,26 @@ pub enum SymbolEntry {
     LiteralFloat(FloatSymbol),
     LiteralBoolean(BoolSymbol),
     Variable(CommonAttrs),
-    Function(SymbolFn),
+    Function(FunctionSymbol),
     None,
 }
 
 impl SymbolEntry {
     pub fn type_to_str(&self) -> &'static str {
         match self {
-            SymbolEntry::LiteralInteger(_) => "literal int",
-            SymbolEntry::LiteralFloat(_) => "literal float",
-            SymbolEntry::LiteralBoolean(_) => "literal bool",
-            SymbolEntry::Variable(_) => "variable",
-            SymbolEntry::Function(_) => "function",
-            SymbolEntry::None => "NONE",
+            SymbolEntry::LiteralInteger(_) => "Integer literal",
+            SymbolEntry::LiteralFloat(_) => "Float literal",
+            SymbolEntry::LiteralBoolean(_) => "Boolean literal",
+            SymbolEntry::Variable(_) => "Variable",
+            SymbolEntry::Function(_) => "Function",
+            SymbolEntry::None => "None :(",
         }
     }
 
     pub fn get_type(&self) -> Type {
         match self {
-            SymbolEntry::Variable(symbol) => symbol.ty.clone(),
-            SymbolEntry::Function(symbol) => symbol.common.ty.clone(),
+            SymbolEntry::Variable(symbol) => symbol.val_type.clone(),
+            SymbolEntry::Function(symbol) => symbol.common.val_type.clone(),
             SymbolEntry::LiteralInteger(_) => Type::INT,
             SymbolEntry::LiteralFloat(_) => Type::FLOAT,
             SymbolEntry::LiteralBoolean(_) => Type::BOOL,
@@ -56,7 +56,7 @@ impl SymbolEntry {
             col: variable.col,
             size: ty.get_size(),
             val: variable.name,
-            ty,
+            val_type: ty,
         })
     }
 
@@ -125,76 +125,46 @@ pub struct CommonAttrs {
     pub col: usize,
     pub size: u32,
     pub val: String,
-    pub ty: Type,
+    pub val_type: Type,
 }
 
 impl CommonAttrs {
     pub fn new(
         name: String,
-        ty: Type,
+        val_type: Type,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Self {
         let ((line, col), _) = lexer.line_col(span);
         let val = name;
-        let size = ty.get_size();
+        let size = val_type.get_size();
         Self {
             line,
             col,
             size,
             val,
-            ty,
+            val_type,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct SymbolFn {
+pub struct FunctionSymbol {
     pub common: CommonAttrs,
     pub args: Option<Vec<SymbolEntry>>,
 }
 
-impl SymbolFn {
+impl FunctionSymbol {
     pub fn new(
         name: String,
-        ty: Type,
+        function_type: Type,
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
         args: Option<Vec<SymbolEntry>>,
     ) -> Self {
-        let mut common = CommonAttrs::new(name, ty, span, lexer);
+        let mut common = CommonAttrs::new(name, function_type, span, lexer);
         common.size = 0;
         Self { common, args }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    INT,
-    FLOAT,
-    BOOL,
-    UNKNOWN,
-}
-
-impl ToString for Type {
-    fn to_string(&self) -> String {
-        match self {
-            Type::INT => "int".to_owned(),
-            Type::FLOAT => "float".to_owned(),
-            Type::BOOL => "bool".to_owned(),
-            Type::UNKNOWN => "UNKNOWN".to_owned(),
-        }
-    }
-}
-
-impl Type {
-    pub fn get_size(&self) -> u32 {
-        match self {
-            Type::INT => 4,
-            Type::FLOAT => 8,
-            Type::BOOL => 1,
-            Type::UNKNOWN => 0,
-        }
     }
 }
 
@@ -215,7 +185,7 @@ impl SymbolTable {
             let (s_line, s_col) = symbol.get_line_col();
             let (line, col) = declared.get_line_col();
             return Err(ParsingError::DeclaredError(format!(
-                "{} at line {s_line}, col {s_col}: {} with identifier \"{key}\" was first declared at line {}, col {}.",
+                "{} em {s_line}, col {s_col}: {} com identificador \"{key}\" foi declarado em linha {}, coluna {}.",
                 symbol.type_to_str(), declared.type_to_str(), line, col
             )));
         }
@@ -233,20 +203,5 @@ impl SymbolTable {
 impl Default for SymbolTable {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[derive(Debug)]
-pub struct UntypedVar {
-    pub line: usize,
-    pub col: usize,
-    pub name: String,
-}
-
-impl UntypedVar {
-    pub fn new(span: Span, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
-        let ((line, col), _) = lexer.line_col(span);
-        let name = lexer.span_str(span).to_string();
-        Self { line, col, name }
     }
 }

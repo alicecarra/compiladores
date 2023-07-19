@@ -151,64 +151,64 @@ impl ASTNode {
         self.print_label(lexer);
         match self {
             ASTNode::FunctionDeclaration(node) => {
-                node.comm.print_parent(self);
+                node.first_command.print_parent(self);
                 node.next_function.print_parent(self);
 
-                node.comm.print(lexer);
+                node.first_command.print(lexer);
                 node.next_function.print(lexer);
             }
             ASTNode::InitializedVariable(node) => {
-                node.ident.print_parent(self);
-                node.lit.print_parent(self);
+                node.identifier.print_parent(self);
+                node.literal.print_parent(self);
                 if let Some(next) = &node.next {
                     next.print_parent(self);
                 }
 
-                node.ident.print(lexer);
-                node.lit.print(lexer);
+                node.identifier.print(lexer);
+                node.literal.print(lexer);
                 if let Some(next) = &node.next {
                     next.print(lexer);
                 }
             }
             ASTNode::AssignmentCommand(node) => {
-                node.ident.print_parent(self);
-                node.expr.print_parent(self);
+                node.identifier.print_parent(self);
+                node.expression.print_parent(self);
                 node.next.print_parent(self);
 
-                node.ident.print(lexer);
-                node.expr.print(lexer);
+                node.identifier.print(lexer);
+                node.expression.print(lexer);
                 node.next.print(lexer);
             }
             ASTNode::FunctionCallCommand(node) => {
-                node.expr.print_parent(self);
+                node.expression.print_parent(self);
                 node.next.print_parent(self);
 
-                node.expr.print(lexer);
+                node.expression.print(lexer);
                 node.next.print(lexer);
             }
             ASTNode::ReturnCommand(node) => {
-                node.expr.print_parent(self);
+                node.expression.print_parent(self);
 
-                node.expr.print(lexer);
+                node.expression.print(lexer);
             }
             ASTNode::WhileCommand(node) => {
-                node.expr.print_parent(self);
-                node.fst_comm.print_parent(self);
+                node.expression.print_parent(self);
+                node.first_command.print_parent(self);
                 node.next.print_parent(self);
 
-                node.expr.print(lexer);
-                node.fst_comm.print(lexer);
+                node.expression.print(lexer);
+                node.first_command.print(lexer);
                 node.next.print(lexer);
             }
             ASTNode::IfCommand(node) => {
-                node.expr.print_parent(self);
-                node.true_fst_comm.print_parent(self);
-                node.false_fst_comm.print_parent(self);
+                node.expression.print_parent(self);
+                node.true_first_command.print_parent(self);
+                node.false_first_command.print_parent(self);
                 node.next.print_parent(self);
 
-                node.expr.print(lexer);
-                node.true_fst_comm.print(lexer);
-                node.false_fst_comm.print(lexer);
+                node.expression.print(lexer);
+                node.true_first_command.print(lexer);
+                node.false_first_command.print(lexer);
                 node.next.print(lexer);
             }
             ASTNode::OrExpression(node)
@@ -368,7 +368,7 @@ impl ASTNode {
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionDeclaration {
     pub span: Span,
-    pub comm: Box<ASTNode>,
+    pub first_command: Box<ASTNode>,
     pub next_function: Box<ASTNode>,
     pub name: Span,
 }
@@ -377,13 +377,13 @@ impl FunctionDeclaration {
     pub fn new(span: Span, comm: Box<ASTNode>, name: Span) -> Self {
         Self {
             span,
-            comm,
+            first_command: comm,
             next_function: Box::new(ASTNode::None),
             name,
         }
     }
 
-    pub fn add_next_fn(&mut self, next_fn: Box<ASTNode>) {
+    pub fn add_next_function(&mut self, next_fn: Box<ASTNode>) {
         self.next_function = next_fn;
     }
 }
@@ -391,22 +391,22 @@ impl FunctionDeclaration {
 #[derive(Debug, PartialEq, Clone)]
 pub struct InitializedVariable {
     pub span: Span,
-    pub ident: Box<ASTNode>,
-    pub lit: Box<ASTNode>,
+    pub identifier: Box<ASTNode>,
+    pub literal: Box<ASTNode>,
     pub next: Option<Box<ASTNode>>,
 }
 
 impl InitializedVariable {
     pub fn new(
         span: Span,
-        ident: Box<ASTNode>,
-        lit: Box<ASTNode>,
+        identifier: Box<ASTNode>,
+        literal: Box<ASTNode>,
         next: Option<Box<ASTNode>>,
     ) -> Self {
         Self {
             span,
-            ident,
-            lit,
+            identifier,
+            literal,
             next,
         }
     }
@@ -423,17 +423,17 @@ impl InitializedVariable {
 #[derive(Debug, PartialEq, Clone)]
 pub struct AssignmentCommand {
     pub span: Span,
-    pub ident: Box<ASTNode>,
-    pub expr: Box<ASTNode>,
+    pub identifier: Box<ASTNode>,
+    pub expression: Box<ASTNode>,
     pub next: Box<ASTNode>,
 }
 
 impl AssignmentCommand {
-    pub fn new(span: Span, ident: Box<ASTNode>, expr: Box<ASTNode>) -> Self {
+    pub fn new(span: Span, identifier: Box<ASTNode>, expression: Box<ASTNode>) -> Self {
         Self {
             span,
-            ident,
-            expr,
+            identifier,
+            expression,
             next: Box::new(ASTNode::None),
         }
     }
@@ -446,16 +446,16 @@ impl AssignmentCommand {
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionCallCommand {
     pub span: Span,
-    pub expr: Box<ASTNode>,
+    pub expression: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub name: Span,
 }
 
 impl FunctionCallCommand {
-    pub fn new(span: Span, expr: Box<ASTNode>, name: Span) -> Self {
+    pub fn new(span: Span, expression: Box<ASTNode>, name: Span) -> Self {
         Self {
             span,
-            expr,
+            expression,
             name,
             next: Box::new(ASTNode::None),
         }
@@ -469,29 +469,29 @@ impl FunctionCallCommand {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReturnCommand {
     pub span: Span,
-    pub expr: Box<ASTNode>,
+    pub expression: Box<ASTNode>,
 }
 
 impl ReturnCommand {
-    pub fn new(span: Span, expr: Box<ASTNode>) -> Self {
-        Self { span, expr }
+    pub fn new(span: Span, expression: Box<ASTNode>) -> Self {
+        Self { span, expression }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct WhileCommand {
     pub span: Span,
-    pub expr: Box<ASTNode>,
-    pub fst_comm: Box<ASTNode>,
+    pub expression: Box<ASTNode>,
+    pub first_command: Box<ASTNode>,
     pub next: Box<ASTNode>,
 }
 
 impl WhileCommand {
-    pub fn new(span: Span, expr: Box<ASTNode>, fst_comm: Box<ASTNode>) -> Self {
+    pub fn new(span: Span, expression: Box<ASTNode>, first_command: Box<ASTNode>) -> Self {
         Self {
             span,
-            expr,
-            fst_comm,
+            expression,
+            first_command,
             next: Box::new(ASTNode::None),
         }
     }
@@ -504,24 +504,24 @@ impl WhileCommand {
 #[derive(Debug, PartialEq, Clone)]
 pub struct IfCommand {
     pub span: Span,
-    pub expr: Box<ASTNode>,
-    pub true_fst_comm: Box<ASTNode>,
-    pub false_fst_comm: Box<ASTNode>,
+    pub expression: Box<ASTNode>,
+    pub true_first_command: Box<ASTNode>,
+    pub false_first_command: Box<ASTNode>,
     pub next: Box<ASTNode>,
 }
 
 impl IfCommand {
     pub fn new(
         span: Span,
-        expr: Box<ASTNode>,
-        true_fst_comm: Box<ASTNode>,
-        false_fst_comm: Box<ASTNode>,
+        expression: Box<ASTNode>,
+        true_first_command: Box<ASTNode>,
+        false_first_command: Box<ASTNode>,
     ) -> Self {
         Self {
             span,
-            expr,
-            true_fst_comm,
-            false_fst_comm,
+            expression,
+            true_first_command,
+            false_first_command,
             next: Box::new(ASTNode::None),
         }
     }

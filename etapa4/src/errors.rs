@@ -1,21 +1,21 @@
 #[derive(Debug, thiserror::Error)]
 pub enum ParsingError {
-    #[error("Attempted use of undeclared variable. {0}")]
+    #[error("Tentativa de uso de variável não declarada. {0}")]
     UndeclaredError(String),
-    #[error("Attempting to declare an already declared {0}")]
+    #[error("Tentativa de declarar variaǘel já declarada. {0}")]
     DeclaredError(String),
     #[error("{0}")]
     VariableError(String),
     #[error("{0}")]
     FunctionError(String),
 
-    #[error("Span get error: {0}")]
+    #[error("Erro de span: {0}")]
     SpanError(String),
-    #[error("Add next to None node error: {0}")]
+    #[error("Add next realizado em none. {0}")]
     AddNextToNone(String),
-    #[error("Coerse unkonwn type error: {0}")]
+    #[error("Erro de tipo desconhecido. {0}")]
     CoerseUnknown(String),
-    #[error("No scope defined")]
+    #[error("Sem escopo definido.")]
     NoScope,
 }
 

@@ -11,7 +11,7 @@ item_list -> Result<ASTNode, anyhow::Error>:
                 match $1? {
                         ASTNode::FunctionDeclaration(mut node) => {
                                 let next_fn = Box::new($2?);
-                                node.add_next_fn(next_fn);
+                                node.add_next_function(next_fn);
                                 Ok(ASTNode::FunctionDeclaration(node))
                         }
                         _ => bail!("Segundo elemento da produção incorreto."),
