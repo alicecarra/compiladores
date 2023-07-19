@@ -1,0 +1,9 @@
+f()->int{
+    int a;
+    int b;
+    int c;
+    if (a) {
+       a = b;
+       b = a;
+    };
+}

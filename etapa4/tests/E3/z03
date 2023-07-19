@@ -1,0 +1,8 @@
+g(int i, int j, int k)->int{
+}
+f()->int{
+    int a;
+    int b;
+    int c;
+    g(a, b, c);
+}
