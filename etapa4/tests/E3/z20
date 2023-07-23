@@ -1,0 +1,6 @@
+f()->int{
+    int i;
+    while(i) {
+    	i = 2;
+    };
+}

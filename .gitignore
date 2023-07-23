@@ -33,3 +33,5 @@
 
 *tgz
 target/
+saida*
+output2dot.sh
