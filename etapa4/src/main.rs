@@ -1,3 +1,4 @@
+use etapa4::new_scope;
 use lrlex::lrlex_mod;
 use lrpar::lrpar_mod;
 use std::io::{self, Write};
@@ -24,6 +25,9 @@ fn main() {
 
     let lexerdef = scanner_l::lexerdef();
     let lexer = lexerdef.lexer(input);
+
+    new_scope();
+
     let (tree, errors) = parser_y::parse(&lexer);
 
     if !errors.is_empty() {
@@ -34,6 +38,10 @@ fn main() {
     }
 
     let tree = tree.unwrap().unwrap();
+
+    let str = tree.node_to_string(&lexer);
+    if !str.is_empty() {
+        print!("{str}");
+    }
     // println!("{:#?}", tree);
-    tree.print(&lexer);
 }

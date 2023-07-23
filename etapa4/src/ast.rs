@@ -1,4 +1,3 @@
-use anyhow::bail;
 use cfgrammar::Span;
 use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
@@ -351,7 +350,7 @@ impl ASTNode {
         format!("{} [label=\"{}\"];", self.hex_address_to_str(), label)
     }
 
-    pub fn span(&self) -> Result<Span, anyhow::Error> {
+    pub fn span(&self) -> Result<Span, ParsingError> {
         match self {
             ASTNode::FunctionDeclaration(node) => Ok(node.span),
             ASTNode::InitializedVariable(node) => Ok(node.span),
@@ -379,7 +378,9 @@ impl ASTNode {
             ASTNode::LiteralFloat(node) => Ok(node.span),
             ASTNode::LiteralBool(node) => Ok(node.span),
             ASTNode::Identifier(node) => Ok(node.span),
-            ASTNode::None => bail!("Não há span"),
+            ASTNode::None => Err(ParsingError::SpanError(
+                "Nó vazio não possui span.".to_string(),
+            )),
         }
     }
 
@@ -498,12 +499,7 @@ impl InitializedVariable {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let mut node = self.clone();
-        try_type_inference(
-            variable_type.clone(),
-            node.literal.get_type(),
-            node.span,
-            lexer,
-        )?;
+        try_type_inference(variable_type.clone(), node.literal.get_type())?;
         node.variable_type = variable_type.clone();
         if let Some(next) = self.next {
             let next = next.update_type(variable_type, lexer)?;
@@ -527,9 +523,8 @@ impl AssignmentCommand {
         span: Span,
         identifier: Box<ASTNode>,
         expression: Box<ASTNode>,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
-        try_type_inference(identifier.get_type(), expression.get_type(), span, lexer)?;
+        try_type_inference(identifier.get_type(), expression.get_type())?;
         let variable_type = identifier.get_type();
         Ok(Self {
             span,
@@ -662,10 +657,8 @@ impl BinaryOperation {
         span: Span,
         child_left: Box<ASTNode>,
         child_right: Box<ASTNode>,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
-        let variable_type =
-            try_type_inference(child_left.get_type(), child_right.get_type(), span, lexer)?;
+        let variable_type = try_type_inference(child_left.get_type(), child_right.get_type())?;
         Ok(Self {
             span,
             child_left,
