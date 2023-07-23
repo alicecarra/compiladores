@@ -3,7 +3,7 @@ use cfgrammar::Span;
 use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
-use crate::{errors::ParsingError, type_enum::Type};
+use crate::{errors::ParsingError, get_symbol, type_enum::Type, untyped::try_type_inference};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ASTNode {
@@ -152,7 +152,7 @@ impl ASTNode {
         self.label(lexer)
     }
 
-    pub fn to_string(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) -> String {
+    pub fn node_to_string(&self, lexer: &LRNonStreamingLexer<DefaultLexerTypes>) -> String {
         let mut current_string = self.label_to_string(lexer);
 
         match self {
@@ -160,8 +160,8 @@ impl ASTNode {
                 current_string += &node.first_command.parent_to_string(self);
                 current_string += &node.next_function.parent_to_string(self);
 
-                current_string += &node.first_command.to_string(lexer);
-                current_string += &node.next_function.to_string(lexer);
+                current_string += &node.first_command.node_to_string(lexer);
+                current_string += &node.next_function.node_to_string(lexer);
             }
             ASTNode::InitializedVariable(node) => {
                 current_string += &node.identifier.parent_to_string(self);
@@ -171,10 +171,10 @@ impl ASTNode {
                     current_string += &next.parent_to_string(self);
                 }
 
-                current_string += &node.identifier.to_string(lexer);
-                current_string += &node.literal.to_string(lexer);
+                current_string += &node.identifier.node_to_string(lexer);
+                current_string += &node.literal.node_to_string(lexer);
                 if let Some(next) = &node.next {
-                    current_string += &next.to_string(lexer);
+                    current_string += &next.node_to_string(lexer);
                 }
             }
             ASTNode::AssignmentCommand(node) => {
@@ -182,30 +182,30 @@ impl ASTNode {
                 current_string += &node.expression.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.identifier.to_string(lexer);
-                current_string += &node.expression.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.identifier.node_to_string(lexer);
+                current_string += &node.expression.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::FunctionCallCommand(node) => {
                 current_string += &node.expression.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.expression.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.expression.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::ReturnCommand(node) => {
                 current_string += &node.expression.parent_to_string(self);
 
-                current_string += &node.expression.to_string(lexer);
+                current_string += &node.expression.node_to_string(lexer);
             }
             ASTNode::WhileCommand(node) => {
                 current_string += &node.expression.parent_to_string(self);
                 current_string += &node.first_command.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.expression.to_string(lexer);
-                current_string += &node.first_command.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.expression.node_to_string(lexer);
+                current_string += &node.first_command.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::IfCommand(node) => {
                 current_string += &node.expression.parent_to_string(self);
@@ -213,10 +213,10 @@ impl ASTNode {
                 current_string += &node.false_first_command.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.expression.to_string(lexer);
-                current_string += &node.true_first_command.to_string(lexer);
-                current_string += &node.false_first_command.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.expression.node_to_string(lexer);
+                current_string += &node.true_first_command.node_to_string(lexer);
+                current_string += &node.false_first_command.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::OrExpression(node)
             | ASTNode::AndExpression(node)
@@ -235,32 +235,32 @@ impl ASTNode {
                 current_string += &node.child_right.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.child_left.to_string(lexer);
-                current_string += &node.child_right.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.child_left.node_to_string(lexer);
+                current_string += &node.child_right.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::NegateExpression(node) | ASTNode::MinusExpression(node) => {
                 current_string += &node.child.parent_to_string(self);
                 current_string += &node.next.parent_to_string(self);
 
-                current_string += &node.child.to_string(lexer);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.child.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::LiteralInt(node) => {
                 current_string += &node.next.parent_to_string(self);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::LiteralFloat(node) => {
                 current_string += &node.next.parent_to_string(self);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::LiteralBool(node) => {
                 current_string += &node.next.parent_to_string(self);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::Identifier(node) => {
                 current_string += &node.next.parent_to_string(self);
-                current_string += &node.next.to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
             }
             ASTNode::None => { /* Não é um no na pratica. */ }
         }
@@ -425,7 +425,7 @@ impl ASTNode {
                 let node = node.update_type(next_type, lexer)?;
                 Ok(ASTNode::InitializedVariable(node))
             }
-            _ => Ok(self), // other nodes don't update types
+            _ => Ok(self),
         }
     }
 }
@@ -498,14 +498,14 @@ impl InitializedVariable {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let mut node = self.clone();
-        try_coersion(
+        try_type_inference(
             variable_type.clone(),
             node.literal.get_type(),
             node.span,
             lexer,
         )?;
         node.variable_type = variable_type.clone();
-        if let Some(next) = self.next.clone() {
+        if let Some(next) = self.next {
             let next = next.update_type(variable_type, lexer)?;
             node.next = Some(Box::new(next));
         }
@@ -529,7 +529,7 @@ impl AssignmentCommand {
         expression: Box<ASTNode>,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
-        try_coersion(identifier.get_type(), expression.get_type(), span, lexer)?;
+        try_type_inference(identifier.get_type(), expression.get_type(), span, lexer)?;
         let variable_type = identifier.get_type();
         Ok(Self {
             span,
@@ -665,7 +665,7 @@ impl BinaryOperation {
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let variable_type =
-            try_coersion(child_left.get_type(), child_right.get_type(), span, lexer)?;
+            try_type_inference(child_left.get_type(), child_right.get_type(), span, lexer)?;
         Ok(Self {
             span,
             child_left,

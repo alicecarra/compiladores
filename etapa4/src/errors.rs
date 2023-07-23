@@ -14,7 +14,7 @@ pub enum ParsingError {
     #[error("Add next realizado em none. {0}")]
     AddNextToNone(String),
     #[error("Erro de tipo desconhecido. {0}")]
-    CoerseUnknown(String),
+    UnknownTypeInference(String),
     #[error("Sem escopo definido.")]
     NoScope,
 }
