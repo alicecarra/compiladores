@@ -1,12 +1,15 @@
 use etapa4::new_scope;
 use lrlex::lrlex_mod;
 use lrpar::lrpar_mod;
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    process::ExitCode,
+};
 
 lrlex_mod!("scanner.l");
 lrpar_mod!("parser.y");
 
-fn main() {
+fn main() -> ExitCode {
     io::stdout().flush().ok();
     let mut input = Vec::new();
     unsafe {
@@ -29,19 +32,26 @@ fn main() {
     new_scope();
 
     let (tree, errors) = parser_y::parse(&lexer);
-
     if !errors.is_empty() {
         for err in errors {
-            eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
+            println!("{}", err.pp(&lexer, &parser_y::token_epp));
         }
-        std::process::exit(1);
+        return ExitCode::from(1);
     }
 
-    let tree = tree.unwrap().unwrap();
+    let tree = tree.unwrap();
 
-    let str = tree.node_to_string(&lexer);
-    if !str.is_empty() {
-        print!("{str}");
+    match tree {
+        Ok(tree) => {
+            let str = tree.node_to_string(&lexer);
+            if !str.is_empty() {
+                print!("{str}");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(err) => {
+            eprintln!("{err}");
+            ExitCode::from(err.to_err_code())
+        }
     }
-    // println!("{:#?}", tree);
 }
