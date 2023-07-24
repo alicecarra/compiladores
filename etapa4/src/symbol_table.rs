@@ -185,7 +185,7 @@ impl SymbolTable {
             let (s_line, s_col) = symbol.get_line_col();
             let (line, col) = declared.get_line_col();
             return Err(ParsingError::DeclaredError(format!(
-                "{} em {s_line}, col {s_col}: {} com identificador \"{key}\" foi declarado em linha {}, coluna {}.",
+                "{} em ({s_line},{s_col}): {} com identificador ({key}) foi declarado em linha ({},{}).",
                 symbol.type_to_str(), declared.type_to_str(), line, col
             )));
         }

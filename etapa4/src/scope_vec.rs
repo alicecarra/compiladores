@@ -32,7 +32,7 @@ impl ScopeVec {
         let ((line, col), _) = lexer.line_col(span);
 
         Err(ParsingError::UndeclaredError(format!(
-            "Identificador: \"{key}\" em {line}, {col} não foi declarado."
+            "Identificador: ({key}) em ({line},{col}) não foi declarado."
         )))
     }
 

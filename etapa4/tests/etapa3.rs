@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod test {
+    use etapa4::{clear_stack, new_scope};
     use lrlex::lrlex_mod;
     use lrpar::lrpar_mod;
 
@@ -20,24 +21,32 @@ mod test {
             let input = std::fs::read_to_string(input.path())
                 .unwrap_or_else(|_| panic!("Erro de leitura no arquivo {}", input_file_name));
 
+            new_scope();
+
             let lexerdef = scanner_l::lexerdef();
             let lexer = lexerdef.lexer(&input);
-            let (_tree, errors) = parser_y::parse(&lexer);
+            let (tree, errors) = parser_y::parse(&lexer);
 
-            assert_eq!(input.contains("INCORRECT"), !errors.is_empty());
+            //println!("Arquivo:{:#?}", input_file_name);
 
-            // if let Some(tree) = _tree {
-            //     if let Ok(tree) = tree {
-            //         println!("\n == {} ==", input_file_name);
-            //         println!("{input}");
-            //         if !errors.is_empty() {
-            //             for err in errors {
-            //                 eprintln!("{}", err.pp(&lexer, &parser_y::token_epp));
-            //             }
-            //         }
-            //         tree.print(&lexer);
-            //     }
-            // }
+            let has_error_semantics = match tree {
+                Some(tree_r) => match tree_r {
+                    Ok(_) => false,
+                    Err(_err) => {
+                        //println!("Erro:{:#?}", err);
+                        true
+                    }
+                },
+                None => true,
+            };
+
+            let has_error_ast = !errors.is_empty();
+
+            let has_error = has_error_ast || has_error_semantics;
+
+            assert_eq!(input.contains("INCORRECT"), has_error);
+
+            clear_stack();
         }
     }
 }

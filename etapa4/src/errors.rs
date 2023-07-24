@@ -2,7 +2,7 @@
 pub enum ParsingError {
     #[error("Tentativa de uso de variável não declarada. {0}")]
     UndeclaredError(String),
-    #[error("Tentativa de declarar variaǘel já declarada. {0}")]
+    #[error("Tentativa de declarar variável já declarada. {0}")]
     DeclaredError(String),
     #[error("{0}")]
     VariableError(String),

@@ -85,11 +85,16 @@ parameters_list->  Result<Vec<SymbolEntry>, ParsingError>:
         };
 
 function_body-> Result<ASTNode, ParsingError>:
-        '{' command_block scope_end '}' { $2 } |
+        '{' command_list scope_end '}' { $2 } |
         '{' '}' { Ok(ASTNode::None) };
 
-command_block-> Result<ASTNode, ParsingError>:
-        command command_block{
+
+command_block -> Result<ASTNode, ParsingError>:
+        '{' scope_begin command_list scope_end '}' { $3 } |
+        '{' '}' { Ok(ASTNode::None) };
+
+command_list -> Result<ASTNode, ParsingError>:
+        command command_list{
                 let command = $1?;
                 match command {
                         ASTNode::None => $2,
@@ -108,7 +113,7 @@ command-> Result<ASTNode, ParsingError>:
         function_call ';'  { $1 }| 
         return ';'  { $1 }| 
         flow_ctrl ';'  { $1 }| 
-        function_body ';'  { $1 };
+        command_block ';'  { $1 };
 
 variable_declare -> Result<ASTNode, ParsingError>:
         type variable_list {
@@ -199,13 +204,13 @@ flow_ctrl ->    Result<ASTNode, ParsingError>:
         while    { $1 } ;
 
 if->    Result<ASTNode, ParsingError>:
-        "TK_PR_IF" '(' expression ')' function_body {
+        "TK_PR_IF" '(' expression ')' command_block {
             let expression = Box::new($3?);
             let true_command = Box::new($5?);
             let node = IfCommand::new($span, expression, true_command, Box::new(ASTNode::None));
             Ok(ASTNode::IfCommand(node))
          }|  
-        "TK_PR_IF" '(' expression ')' function_body "TK_PR_ELSE" function_body {
+        "TK_PR_IF" '(' expression ')' command_block "TK_PR_ELSE" command_block {
             let expression = Box::new($3?);
             let true_command = Box::new($5?);
             let false_command = Box::new($7?);
@@ -213,7 +218,7 @@ if->    Result<ASTNode, ParsingError>:
             Ok(ASTNode::IfCommand(node))
         };
 while-> Result<ASTNode, ParsingError>:
-        "TK_PR_WHILE"  '(' expression ')' function_body{
+        "TK_PR_WHILE"  '(' expression ')' command_block{
             let expression = Box::new($3?);
             let command = Box::new($5?);
             let node = WhileCommand::new($span, expression, command);
