@@ -1,4 +1,4 @@
-use etapa5::new_scope;
+use etapa5::{new_scope, symbol_table::ScopeType};
 use lrlex::lrlex_mod;
 use lrpar::lrpar_mod;
 use std::{
@@ -29,7 +29,7 @@ fn main() -> ExitCode {
     let lexerdef = scanner_l::lexerdef();
     let lexer = lexerdef.lexer(input);
 
-    new_scope();
+    new_scope(ScopeType::Global);
 
     let (tree, errors) = parser_y::parse(&lexer);
     if !errors.is_empty() {

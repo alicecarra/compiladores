@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use etapa5::{clear_stack, new_scope};
+    use etapa5::{clear_stack, new_scope, symbol_table::ScopeType};
     use lrlex::lrlex_mod;
     use lrpar::lrpar_mod;
 
@@ -21,7 +21,7 @@ mod test {
             let input = std::fs::read_to_string(input.path())
                 .unwrap_or_else(|_| panic!("Erro de leitura no arquivo {}", input_file_name));
 
-            new_scope();
+            new_scope(ScopeType::Global);
 
             let lexerdef = scanner_l::lexerdef();
             let lexer = lexerdef.lexer(&input);
