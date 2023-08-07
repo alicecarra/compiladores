@@ -2,7 +2,17 @@ use cfgrammar::Span;
 use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
 use lrpar::NonStreamingLexer;
 
-use crate::{errors::ParsingError, get_symbol, type_enum::Type, untyped::try_type_inference};
+use crate::{
+    errors::ParsingError,
+    get_function_label, get_function_size, get_new_label, get_register, get_symbol, get_temporary,
+    get_variable_offset,
+    iloc::{
+        save_rfp_rsp, CompareInstruction, FullOperation, Jump, OneInputOneOutput,
+        OneInputTwoOutput, ILOC, RETVAL_ADDR, RET_ADDR, RFP_ADDR, RSP_ADDR,
+    },
+    type_enum::Type,
+    untyped::try_type_inference,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ASTNode {
@@ -429,6 +439,324 @@ impl ASTNode {
             _ => Ok(self),
         }
     }
+
+    pub fn generate_my_code(
+        self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        match self {
+            ASTNode::InitializedVariable(mut node) => {
+                node.generate_my_code(lexer)?;
+                Ok(ASTNode::InitializedVariable(node))
+            }
+            _ => Ok(self), // other nodes should already have generated code
+        }
+    }
+
+    pub fn code(&self) -> Vec<ILOC> {
+        match self {
+            ASTNode::FunctionDeclaration(node) => node.code.clone(),
+            ASTNode::InitializedVariable(node) => node.code.clone(),
+            ASTNode::AssignmentCommand(node) => node.code.clone(),
+            ASTNode::FunctionCallCommand(node) => node.code.clone(),
+            ASTNode::ReturnCommand(node) => node.code.clone(),
+            ASTNode::IfCommand(node) => node.code.clone(),
+            ASTNode::WhileCommand(node) => node.code.clone(),
+            ASTNode::EqualExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|instruction| match instruction {
+                    ILOC::Compare(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "cmp_EQ".to_string();
+                        }
+                        ILOC::Compare(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::NotEqualExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|instruction| match instruction {
+                    ILOC::Compare(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "cmp_NE".to_string();
+                        }
+                        ILOC::Compare(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::LessThanExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|instruction| match instruction {
+                    ILOC::Compare(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LT".to_string();
+                        }
+                        ILOC::Compare(inst)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::GreaterThanExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|instruction| match instruction {
+                    ILOC::Compare(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GT".to_string();
+                        }
+                        ILOC::Compare(inst)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::LessEqualExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|instruction| match instruction {
+                    ILOC::Compare(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LE".to_string();
+                        }
+                        ILOC::Compare(inst)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::GreaterEqualExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Compare(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GE".to_string();
+                        }
+                        ILOC::Compare(inst)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::OrExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "or".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::AndExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "and".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::AdditionExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "add".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::SubtractionExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "sub".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::MultiplyExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "mult".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::DivisionExpression(node) => node
+                .code
+                .clone()
+                .into_iter()
+                .map(|inst| match inst {
+                    ILOC::Arithmetic(mut instruction) => {
+                        if instruction.name.is_empty() {
+                            instruction.name = "div".to_string();
+                        }
+                        ILOC::Arithmetic(instruction)
+                    }
+                    instruction => instruction,
+                })
+                .collect(),
+            ASTNode::ModExpression(node) => node.code.clone(),
+            ASTNode::NegateExpression(node) => node.code.clone(),
+            ASTNode::MinusExpression(node) => node.code.clone(),
+            ASTNode::LiteralInt(node) => node.code.clone(),
+            ASTNode::LiteralFloat(node) => node.code.clone(),
+            ASTNode::LiteralBool(node) => node.code.clone(),
+            ASTNode::Identifier(node) => node.code.clone(),
+            ASTNode::None => vec![ILOC::Empty],
+        }
+    }
+
+    pub fn temporary(&self) -> String {
+        match self {
+            ASTNode::FunctionCallCommand(node) => node.temporary_code.clone(),
+            ASTNode::OrExpression(node) => node.temporary_code.clone(),
+            ASTNode::AndExpression(node) => node.temporary_code.clone(),
+            ASTNode::EqualExpression(node) => node.temporary_code.clone(),
+            ASTNode::NotEqualExpression(node) => node.temporary_code.clone(),
+            ASTNode::LessThanExpression(node) => node.temporary_code.clone(),
+            ASTNode::GreaterThanExpression(node) => node.temporary_code.clone(),
+            ASTNode::LessEqualExpression(node) => node.temporary_code.clone(),
+            ASTNode::GreaterEqualExpression(node) => node.temporary_code.clone(),
+            ASTNode::AdditionExpression(node) => node.temporary_code.clone(),
+            ASTNode::SubtractionExpression(node) => node.temporary_code.clone(),
+            ASTNode::MultiplyExpression(node) => node.temporary_code.clone(),
+            ASTNode::DivisionExpression(node) => node.temporary_code.clone(),
+            ASTNode::LiteralInt(node) => node.temporary_code.clone(),
+            ASTNode::Identifier(node) => node.temporary_code.clone(),
+            ASTNode::FunctionDeclaration(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::InitializedVariable(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::AssignmentCommand(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::ReturnCommand(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::IfCommand(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::WhileCommand(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::ModExpression(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::NegateExpression(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::MinusExpression(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::LiteralBool(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::LiteralFloat(_) => unimplemented!("Implementação não realizada"),
+            ASTNode::None => unimplemented!("Implementação não realizada"),
+        }
+    }
+
+    pub fn is_initialized_variable(&self) -> bool {
+        matches!(self, ASTNode::InitializedVariable(_))
+    }
+
+    pub fn generate_load(
+        &mut self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        match self {
+            ASTNode::Identifier(node) => node.gen_load(lexer),
+            _ => Ok(()),
+        }
+    }
+
+    pub fn generate_initial_code(&mut self) -> Result<(), ParsingError> {
+        {
+            let mut code = vec![];
+            let load_rfp = ILOC::LoadImediate(OneInputOneOutput::new(
+                "loadI".to_string(),
+                "1024".to_string(),
+                "rfp".to_string(),
+            ));
+            let load_rsp = ILOC::LoadImediate(OneInputOneOutput::new(
+                "loadI".to_string(),
+                "1024".to_string(),
+                "rsp".to_string(),
+            ));
+
+            let temp_rpc = get_temporary();
+            let load_rpc = ILOC::Arithmetic(FullOperation::new(
+                "addI".to_string(),
+                "rpc".to_string(),
+                "3".to_string(),
+                temp_rpc.clone(),
+            ));
+            let ret_addr_save = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                "storeAI".to_string(),
+                temp_rpc,
+                "rsp".to_string(),
+                RET_ADDR.to_string(),
+            ));
+            let main_label = get_function_label("main".to_string())?;
+            let jump_main = ILOC::Jump(Jump::new("jumpI".to_string(), main_label));
+
+            code.push(load_rfp);
+            code.push(load_rsp);
+            code.extend(save_rfp_rsp());
+            code.push(load_rpc);
+            code.push(ret_addr_save);
+            code.push(jump_main);
+            code.push(ILOC::Halt);
+
+            match self {
+                ASTNode::FunctionDeclaration(node) => {
+                    code.extend(node.code.clone());
+                    node.code = code;
+                    Ok(())
+                }
+                _ => Err(ParsingError::NotRootFunction),
+            }?;
+        }
+        Ok(())
+    }
+
+    pub fn get_temporary_vecs(&self) -> Vec<String> {
+        match self {
+            ASTNode::EqualExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::NotEqualExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::LessThanExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::GreaterThanExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::LessEqualExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::GreaterEqualExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::OrExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::AndExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::AdditionExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::SubtractionExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::MultiplyExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::DivisionExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::ModExpression(expr) => expr.get_temporary_vec(),
+            ASTNode::LiteralInt(expr) => expr.get_temporary_vec(),
+            ASTNode::Identifier(expr) => expr.get_temps(),
+            _ => vec![],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -437,16 +765,49 @@ pub struct FunctionDeclaration {
     pub first_command: Box<ASTNode>,
     pub next_function: Box<ASTNode>,
     pub name: Span,
+    pub code: Vec<ILOC>,
 }
 
 impl FunctionDeclaration {
-    pub fn new(span: Span, comm: Box<ASTNode>, name: Span) -> Self {
-        Self {
+    pub fn new(
+        span: Span,
+        comm: Box<ASTNode>,
+        name: Span,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
+        let code = {
+            let symbol = get_symbol(name, lexer)?;
+            let label = symbol.get_label();
+            let fun_size = get_function_size(symbol.get_key())?;
+
+            let mut code = vec![ILOC::Nop(Some(label))];
+            let update_rfp = ILOC::LoadImediate(OneInputOneOutput::new(
+                "i2i".to_string(),
+                "rsp".to_string(),
+                "rfp".to_string(),
+            ));
+            let update_rsp = ILOC::Arithmetic(FullOperation::new(
+                "addI".to_string(),
+                "rsp".to_string(),
+                fun_size.to_string(),
+                "rsp".to_string(),
+            ));
+            code.push(update_rfp);
+            code.push(update_rsp);
+
+            code.extend(comm.code());
+
+            code.extend(return_to_caller_instructions());
+            code
+        };
+
+        Ok(Self {
             span,
             first_command: comm,
             next_function: Box::new(ASTNode::None),
             name,
-        }
+            code,
+        })
     }
 
     pub fn add_next_function(&mut self, next_fn: Box<ASTNode>) {
@@ -461,6 +822,7 @@ pub struct InitializedVariable {
     pub literal: Box<ASTNode>,
     pub next: Option<Box<ASTNode>>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
 }
 
 impl InitializedVariable {
@@ -477,6 +839,7 @@ impl InitializedVariable {
             literal,
             next,
             variable_type,
+            code: Vec::new(),
         }
     }
 
@@ -484,12 +847,13 @@ impl InitializedVariable {
         match &self.next {
             Some(node) => {
                 self.next = match **node {
-                    ASTNode::None => Some(next),
-                    _ => Some(Box::new(node.clone().add_next(next)?)),
+                    ASTNode::None => Some(next.clone()),
+                    _ => Some(Box::new(node.clone().add_next(next.clone())?)),
                 }
             }
-            None => self.next = Some(next),
+            None => self.next = Some(next.clone()),
         }
+        self.code.extend(next.code());
         Ok(())
     }
 
@@ -507,6 +871,36 @@ impl InitializedVariable {
         }
         Ok(node)
     }
+
+    pub fn generate_my_code(
+        &mut self,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        {
+            if let Some(next) = self.next.clone() {
+                let next = next.generate_my_code(_lexer)?;
+                self.next = Some(Box::new(next));
+            }
+
+            let symbol = get_symbol(self.identifier.span()?, _lexer)?;
+
+            let reg = get_register(&symbol);
+            let inst = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                "storeAI".to_string(),
+                self.literal.temporary(),
+                reg,
+                symbol.offset().to_string(),
+            ));
+            let mut code = vec![];
+            code.extend(self.literal.code());
+            code.push(inst);
+            if let Some(next) = self.next.clone() {
+                code.extend(next.code());
+            }
+            self.code = code;
+        };
+        Ok(())
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -516,6 +910,7 @@ pub struct AssignmentCommand {
     pub expression: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
 }
 
 impl AssignmentCommand {
@@ -523,15 +918,33 @@ impl AssignmentCommand {
         span: Span,
         identifier: Box<ASTNode>,
         expression: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         try_type_inference(identifier.get_type(), expression.get_type())?;
         let variable_type = identifier.get_type();
+
+        let code = {
+            let symbol = get_symbol(identifier.span()?, lexer)?;
+            let reg = get_register(&symbol);
+            let inst = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                "storeAI".to_string(),
+                expression.temporary(),
+                reg,
+                symbol.offset().to_string(),
+            ));
+            let mut code = vec![];
+            code.extend(expression.code());
+            code.push(inst);
+            code
+        };
+
         Ok(Self {
             span,
             identifier,
             expression,
             next: Box::new(ASTNode::None),
             variable_type,
+            code,
         })
     }
 
@@ -547,22 +960,89 @@ pub struct FunctionCallCommand {
     pub next: Box<ASTNode>,
     pub name: Box<ASTNode>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
+    pub temporary_code: String,
 }
 
 impl FunctionCallCommand {
-    pub fn new(span: Span, expression: Box<ASTNode>, identifier: Box<ASTNode>) -> Self {
+    pub fn new(
+        span: Span,
+        expression: Box<ASTNode>,
+        identifier: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<Self, ParsingError> {
         let variable_type = identifier.get_type();
-        Self {
+
+        let temporary_code = get_temporary();
+
+        let code = {
+            let mut code = vec![];
+            let temps = expression.get_temporary_vecs();
+            let name = lexer.span_str(identifier.span()?).to_string();
+            let mut offset = get_variable_offset(name.clone())?;
+            offset.sort_by_key(|vals| vals.1);
+
+            code.extend(expression.code());
+            temps
+                .into_iter()
+                .rev()
+                .zip(offset)
+                .for_each(|(temp, (_key, desloc))| {
+                    let load_temp_to_param = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                        "storeAI".to_string(),
+                        temp,
+                        "rsp".to_string(),
+                        desloc.to_string(),
+                    ));
+                    code.push(load_temp_to_param);
+                });
+
+            let temp_rpc = get_temporary();
+            let load_rpc = ILOC::Arithmetic(FullOperation::new(
+                "addI".to_string(),
+                "rpc".to_string(),
+                3.to_string(),
+                temp_rpc.clone(),
+            ));
+            let ret_addr_save = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                "storeAI".to_string(),
+                temp_rpc,
+                "rsp".to_string(),
+                RET_ADDR.to_string(),
+            ));
+            let fn_label = get_function_label(name)?;
+            let jump_fn = ILOC::Jump(Jump::new("jumpI".to_string(), fn_label));
+
+            code.extend(save_rfp_rsp());
+            code.push(load_rpc);
+            code.push(ret_addr_save);
+            code.push(jump_fn);
+
+            let retrieve_ret_val = ILOC::LoadOffSet(FullOperation::new(
+                "loadAI".to_string(),
+                "rsp".to_string(),
+                RETVAL_ADDR.to_string(),
+                temporary_code.clone(),
+            ));
+            code.push(retrieve_ret_val);
+
+            code
+        };
+
+        Ok(Self {
             span,
             expression,
             name: identifier,
             next: Box::new(ASTNode::None),
             variable_type,
-        }
+            code,
+            temporary_code,
+        })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -571,15 +1051,33 @@ pub struct ReturnCommand {
     pub span: Span,
     pub expression: Box<ASTNode>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
 }
 
 impl ReturnCommand {
     pub fn new(span: Span, expression: Box<ASTNode>) -> Self {
         let variable_type = expression.get_type();
+
+        let code = {
+            let mut code = vec![];
+            code.extend(expression.code());
+            let exp_temp = expression.temporary();
+            let save_ret_value = ILOC::StoreOffSet(OneInputTwoOutput::new(
+                "storeAI".to_string(),
+                exp_temp,
+                "rfp".to_string(),
+                RETVAL_ADDR.to_string(),
+            ));
+            code.push(save_ret_value);
+            code.extend(return_to_caller_instructions());
+            code
+        };
+
         Self {
             span,
             expression,
             variable_type,
+            code,
         }
     }
 }
@@ -591,22 +1089,68 @@ pub struct WhileCommand {
     pub first_command: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
 }
 
 impl WhileCommand {
     pub fn new(span: Span, expression: Box<ASTNode>, first_command: Box<ASTNode>) -> Self {
         let variable_type = expression.get_type();
+
+        let code = {
+            let label_expr = get_new_label();
+            let label_true = get_new_label();
+            let label_later = get_new_label();
+
+            let temp = get_temporary();
+            let op_temp = get_temporary();
+            let nop_expr = ILOC::Nop(Some(label_expr.clone()));
+            let load_op = ILOC::LoadImediate(OneInputOneOutput::new(
+                "loadI".to_string(),
+                0.to_string(),
+                temp.clone(),
+            ));
+            let cmp_ne = ILOC::Compare(CompareInstruction::new(
+                "cmp_NE".to_string(),
+                expression.temporary(),
+                temp,
+                op_temp.clone(),
+            ));
+            let cbr = ILOC::ConditionalBranch(OneInputTwoOutput::new(
+                "cbr".to_string(),
+                op_temp,
+                label_true.clone(),
+                label_later.clone(),
+            ));
+            let true_nop = ILOC::Nop(Some(label_true));
+            let jump_back = ILOC::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
+            let later_nop = ILOC::Nop(Some(label_later));
+
+            let mut code = vec![];
+            code.push(nop_expr);
+            code.extend(expression.code());
+            code.push(load_op);
+            code.push(cmp_ne);
+            code.push(cbr);
+            code.push(true_nop);
+            code.extend(first_command.code());
+            code.push(jump_back);
+            code.push(later_nop);
+            code
+        };
+
         Self {
             span,
             expression,
             first_command,
             next: Box::new(ASTNode::None),
             variable_type,
+            code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -618,6 +1162,7 @@ pub struct IfCommand {
     pub false_first_command: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    pub code: Vec<ILOC>,
 }
 
 impl IfCommand {
@@ -628,6 +1173,50 @@ impl IfCommand {
         false_first_command: Box<ASTNode>,
     ) -> Self {
         let variable_type = expression.get_type();
+
+        let code = {
+            let label_true = get_new_label();
+            let label_false = get_new_label();
+            let label_later = get_new_label();
+
+            let temp = get_temporary();
+            let op_temp = get_temporary();
+            let load_op = ILOC::LoadImediate(OneInputOneOutput::new(
+                "loadI".to_string(),
+                0.to_string(),
+                temp.clone(),
+            ));
+            let cmp_ne = ILOC::Compare(CompareInstruction::new(
+                "cmp_NE".to_string(),
+                expression.temporary(),
+                temp,
+                op_temp.clone(),
+            ));
+            let cbr = ILOC::ConditionalBranch(OneInputTwoOutput::new(
+                "cbr".to_string(),
+                op_temp,
+                label_true.clone(),
+                label_false.clone(),
+            ));
+            let true_nop = ILOC::Nop(Some(label_true));
+            let jump_later = ILOC::Jump(Jump::new("jumpI".to_string(), label_later.clone()));
+            let false_nop = ILOC::Nop(Some(label_false));
+            let later_nop = ILOC::Nop(Some(label_later));
+
+            let mut code = vec![];
+            code.extend(expression.code());
+            code.push(load_op);
+            code.push(cmp_ne);
+            code.push(cbr);
+            code.push(true_nop);
+            code.extend(true_first_command.code());
+            code.push(jump_later);
+            code.push(false_nop);
+            code.extend(false_first_command.code());
+            code.push(later_nop);
+            code
+        };
+
         Self {
             span,
             expression,
@@ -635,6 +1224,7 @@ impl IfCommand {
             false_first_command,
             next: Box::new(ASTNode::None),
             variable_type,
+            code,
         }
     }
 
@@ -650,6 +1240,8 @@ pub struct BinaryOperation {
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    temporary_code: String,
+    code: Vec<ILOC>,
 }
 
 impl BinaryOperation {
@@ -657,19 +1249,45 @@ impl BinaryOperation {
         span: Span,
         child_left: Box<ASTNode>,
         child_right: Box<ASTNode>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let variable_type = try_type_inference(child_left.get_type(), child_right.get_type())?;
+
+        let temporary_code = get_temporary();
+        let code = {
+            let inst = ILOC::Arithmetic(FullOperation::new(
+                "".to_string(),
+                child_left.temporary(),
+                child_right.temporary(),
+                temporary_code.clone(),
+            ));
+            let mut code = vec![];
+
+            code.extend(child_left.code());
+            code.extend(child_right.code());
+            code.push(inst);
+            code
+        };
         Ok(Self {
             span,
             child_left,
             child_right,
             next: Box::new(ASTNode::None),
             variable_type,
+            code,
+            temporary_code,
         })
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
+    }
+
+    pub fn get_temporary_vec(&self) -> Vec<String> {
+        let mut temps = vec![self.temporary_code.clone()];
+        temps.extend(self.next.get_temporary_vecs());
+        temps
     }
 }
 
@@ -679,6 +1297,8 @@ pub struct UnaryOperation {
     pub child: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    code: Vec<ILOC>,
+    temporary_code: String,
 }
 
 impl UnaryOperation {
@@ -689,11 +1309,14 @@ impl UnaryOperation {
             child,
             next: Box::new(ASTNode::None),
             variable_type,
+            code: vec![],
+            temporary_code: "".to_string(),
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -702,19 +1325,40 @@ pub struct LiteralInt {
     pub span: Span,
     pub line: usize,
     pub next: Box<ASTNode>,
+    code: Vec<ILOC>,
+    temporary_code: String,
 }
 
 impl LiteralInt {
-    pub fn new(span: Span, line: usize) -> Self {
+    pub fn new(span: Span, line: usize, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
+        let val = lexer.span_str(span).to_string();
+        let temporary_code = get_temporary();
+        let code = {
+            let inst = ILOC::LoadImediate(OneInputOneOutput::new(
+                "loadI".to_string(),
+                val,
+                temporary_code.clone(),
+            ));
+            vec![inst]
+        };
         Self {
             span,
             line,
             next: Box::new(ASTNode::None),
+            code,
+            temporary_code,
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
+    }
+
+    pub fn get_temporary_vec(&self) -> Vec<String> {
+        let mut temps = vec![self.temporary_code.clone()];
+        temps.extend(self.next.get_temporary_vecs());
+        temps
     }
 }
 
@@ -723,6 +1367,7 @@ pub struct LiteralFloat {
     pub line: usize,
     pub span: Span,
     pub next: Box<ASTNode>,
+    code: Vec<ILOC>,
 }
 
 impl LiteralFloat {
@@ -731,11 +1376,13 @@ impl LiteralFloat {
             span,
             line,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -744,6 +1391,7 @@ pub struct LiteralBool {
     pub span: Span,
     pub line: usize,
     pub next: Box<ASTNode>,
+    code: Vec<ILOC>,
 }
 
 impl LiteralBool {
@@ -752,11 +1400,13 @@ impl LiteralBool {
             span,
             line,
             next: Box::new(ASTNode::None),
+            code: vec![],
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -766,6 +1416,8 @@ pub struct Identifier {
     pub line: usize,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
+    code: Vec<ILOC>,
+    temporary_code: String,
 }
 
 impl Identifier {
@@ -780,10 +1432,68 @@ impl Identifier {
             next: Box::new(ASTNode::None),
             line,
             variable_type,
+            code: vec![],
+            temporary_code: "".to_string(),
         }
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
+
+    pub fn gen_load(
+        &mut self,
+        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        {
+            let symbol = get_symbol(self.span, _lexer)?;
+            let desloc = symbol.offset().to_string();
+            let reg = get_register(&symbol);
+            self.temporary_code = get_temporary();
+            self.code = vec![ILOC::LoadOffSet(FullOperation::new(
+                "loadAI".to_string(),
+                reg,
+                desloc,
+                self.temporary_code.clone(),
+            ))];
+        };
+        Ok(())
+    }
+
+    pub fn get_temps(&self) -> Vec<String> {
+        let mut temps = vec![self.temporary_code.clone()];
+        temps.extend(self.next.get_temporary_vecs());
+        temps
+    }
+}
+
+fn return_to_caller_instructions() -> Vec<ILOC> {
+    let mut code = vec![];
+    let restore_rsp = ILOC::LoadOffSet(FullOperation::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RSP_ADDR.to_string(),
+        "rsp".to_string(),
+    ));
+    let restore_rfp = ILOC::LoadOffSet(FullOperation::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RFP_ADDR.to_string(),
+        "rfp".to_string(),
+    ));
+
+    let ret_addr_temp = get_temporary();
+    let load_ret_addr = ILOC::LoadOffSet(FullOperation::new(
+        "loadAI".to_string(),
+        "rfp".to_string(),
+        RET_ADDR.to_string(),
+        ret_addr_temp.clone(),
+    ));
+    let return_to_caller = ILOC::Jump(Jump::new("jump".to_string(), ret_addr_temp));
+    code.push(load_ret_addr);
+    code.push(restore_rsp);
+    code.push(restore_rfp);
+    code.push(return_to_caller);
+    code
 }

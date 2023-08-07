@@ -4,7 +4,9 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{errors::ParsingError, type_enum::Type, untyped::UntypedVar};
+use crate::{
+    errors::ParsingError, iloc::RESERV_MEM, type_enum::Type, untyped::UntypedVar, SCOPE_VEC,
+};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -14,6 +16,10 @@ pub enum SymbolEntry {
     Variable(CommonAttrs),
     Function(FunctionSymbol),
     None,
+}
+
+pub fn check_global(symbol: &SymbolEntry) -> bool {
+    return SCOPE_VEC.with(|stack| stack.borrow().is_global(symbol));
 }
 
 impl SymbolEntry {
@@ -57,6 +63,7 @@ impl SymbolEntry {
             size: ty.get_size(),
             val: variable.name,
             val_type: ty,
+            offset: 0_u32,
         })
     }
 
@@ -90,6 +97,57 @@ impl SymbolEntry {
                 size: Type::BOOL.get_size(),
                 val: lit,
             })
+        }
+    }
+
+    pub fn get_label(&self) -> String {
+        match self {
+            SymbolEntry::Function(content) => content.label.clone(),
+            symbol => {
+                panic!("Somente funcções possuem label. Tentando extrair label de: {symbol:#?}")
+            }
+        }
+    }
+
+    pub fn size(&self) -> u32 {
+        match self {
+            SymbolEntry::LiteralInteger(_) => 0,
+            SymbolEntry::LiteralFloat(_) => 0,
+            SymbolEntry::LiteralBoolean(_) => 0,
+            SymbolEntry::Variable(var) => var.size,
+            SymbolEntry::Function(_) => 0,
+            SymbolEntry::None => 0,
+        }
+    }
+
+    pub fn get_key(&self) -> String {
+        match self {
+            SymbolEntry::LiteralInteger(content) => content.val.to_string(),
+            SymbolEntry::LiteralFloat(content) => content.val_string.clone(),
+            SymbolEntry::LiteralBoolean(content) => content.val.to_string(),
+            SymbolEntry::Variable(content) => content.val.to_string(),
+            SymbolEntry::Function(content) => content.common.val.to_string(),
+            SymbolEntry::None => "".to_string(),
+        }
+    }
+
+    pub fn update_offset(&mut self, offset: u32) {
+        match self {
+            SymbolEntry::Variable(var) => {
+                var.offset += offset;
+            }
+            _ => (), // only simple vars can update deslocs inside functions
+        }
+    }
+
+    pub fn offset(&self) -> u32 {
+        match self {
+            SymbolEntry::LiteralInteger(_) => 0,
+            SymbolEntry::LiteralFloat(_) => 0,
+            SymbolEntry::LiteralBoolean(_) => 0,
+            SymbolEntry::Variable(var) => var.offset,
+            SymbolEntry::Function(_) => 0,
+            SymbolEntry::None => 0,
         }
     }
 }
@@ -126,6 +184,7 @@ pub struct CommonAttrs {
     pub size: u32,
     pub val: String,
     pub val_type: Type,
+    pub offset: u32,
 }
 
 impl CommonAttrs {
@@ -144,6 +203,7 @@ impl CommonAttrs {
             size,
             val,
             val_type,
+            offset: 0,
         }
     }
 }
@@ -152,6 +212,7 @@ impl CommonAttrs {
 pub struct FunctionSymbol {
     pub common: CommonAttrs,
     pub args: Option<Vec<SymbolEntry>>,
+    pub label: String,
 }
 
 impl FunctionSymbol {
@@ -161,23 +222,60 @@ impl FunctionSymbol {
         span: Span,
         lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
         args: Option<Vec<SymbolEntry>>,
+        label: String,
     ) -> Self {
         let mut common = CommonAttrs::new(name, function_type, span, lexer);
         common.size = 0;
-        Self { common, args }
+        Self {
+            common,
+            args,
+            label,
+        }
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ScopeType {
+    Global,
+    Function,
+    Inner,
+}
+
 #[derive(Debug)]
-pub struct SymbolTable(pub HashMap<String, SymbolEntry>);
+pub struct SymbolTable {
+    pub table: HashMap<String, SymbolEntry>,
+    pub children: Vec<Box<SymbolTable>>,
+    pub name: Option<String>,
+    pub scope_type: ScopeType,
+    pub offset: u32,
+}
 
 impl SymbolTable {
-    pub fn new() -> Self {
-        Self(HashMap::default())
+    pub fn new(scope_type: ScopeType) -> Self {
+        Self {
+            name: None,
+            table: HashMap::default(),
+            children: Vec::new(),
+            scope_type,
+            offset: 0_u32,
+        }
+    }
+
+    pub fn change_base_offset(&mut self, offset: u32) {
+        self.offset += offset;
+        self.table = self
+            .table
+            .clone()
+            .into_iter()
+            .map(|(key, mut symbol)| {
+                symbol.update_offset(offset);
+                (key, symbol)
+            })
+            .collect();
     }
 
     pub fn add_symbol(&mut self, key: String, symbol: SymbolEntry) -> Result<(), ParsingError> {
-        if let Some(declared) = self.0.get(&key) {
+        if let Some(declared) = self.table.get(&key) {
             if declared.is_literal() {
                 return Ok(());
             }
@@ -190,18 +288,36 @@ impl SymbolTable {
             )));
         }
 
-        self.0.insert(key, symbol);
+        self.table.insert(key, symbol);
 
         Ok(())
     }
 
     pub fn get(&self, key: &String) -> Option<&SymbolEntry> {
-        self.0.get(key)
+        self.table.get(key)
+    }
+
+    pub fn get_size(&self) -> u32 {
+        let mut size = self
+            .table
+            .iter()
+            .map(|(_, symbol)| symbol.size())
+            .reduce(|acc, size| acc + size)
+            .unwrap_or(0);
+        size = size.max(
+            self.children
+                .iter()
+                .map(|table| table.get_size())
+                .reduce(|acc, size| acc.max(size))
+                .unwrap_or(0),
+        );
+
+        size + RESERV_MEM
     }
 }
 
 impl Default for SymbolTable {
     fn default() -> Self {
-        Self::new()
+        Self::new(ScopeType::Global)
     }
 }

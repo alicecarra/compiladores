@@ -15,6 +15,8 @@ pub enum ParsingError {
     AddNextToNone(String),
     #[error("Erro de tipo desconhecido. {0}")]
     UnknownTypeInference(String),
+    #[error("Tree root is not a function")]
+    NotRootFunction,
     #[error("Sem escopo definido.")]
     NoScope,
 }
