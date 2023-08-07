@@ -1,0 +1,6 @@
+//ERR_FUNCTION
+g()->int { return 0; }
+f()->int {
+    g = 2;
+    return 0;
+}

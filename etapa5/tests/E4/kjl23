@@ -1,0 +1,11 @@
+//ERR_UNDECLARED
+f()->int{
+    {
+	{
+	   {
+	      v = 42;
+ 	   };
+	};
+    };
+    return 0;
+}

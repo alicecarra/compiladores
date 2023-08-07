@@ -1,0 +1,10 @@
+//ERR_UNDECLARED
+int a;
+f()->int {
+  if (a) {
+    a = b;
+  }else{
+    a = 3;
+  };
+  return 0;
+}

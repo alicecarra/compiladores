@@ -1,0 +1,14 @@
+//ERR_DECLARED
+f()->int {
+  return 0;
+}
+int a;
+
+g()->int {
+  return 0;
+}
+
+h()->int {
+  return 0;
+}
+int a;
