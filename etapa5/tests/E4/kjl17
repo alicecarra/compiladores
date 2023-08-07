@@ -1,0 +1,3 @@
+//ERR_UNDECLARED
+g()->int { h(); return 0; }
+f()->int { g(); return 0; }

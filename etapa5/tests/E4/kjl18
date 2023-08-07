@@ -1,0 +1,9 @@
+//ERR_DECLARED
+f()->int{
+    int a;
+    {
+	int a;
+	int a;
+    };
+    return 0;
+}

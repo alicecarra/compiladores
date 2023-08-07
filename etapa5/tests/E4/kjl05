@@ -1,0 +1,6 @@
+//ERR_VARIABLE
+f()->int {
+  int a;
+  a();
+  return 0;
+}

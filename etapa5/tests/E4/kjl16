@@ -1,0 +1,2 @@
+//ERR_UNDECLARED
+f()->int { g(); return 0; }

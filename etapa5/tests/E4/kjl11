@@ -1,0 +1,6 @@
+//ERR_UNDECLARED
+f()->int {
+    float z <= 2.3;
+    a = z;
+    return 0;
+}
