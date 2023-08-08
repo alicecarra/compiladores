@@ -3,7 +3,11 @@
 %%
 
 program-> Result<ASTNode, ParsingError>:
-        item_list { $1 } |
+        item_list { 
+                let mut ast_root = $1?; //A implementação escolhida pelo nosso grupo foi a geração de código intermediário em duas passagens. A outra passagem ocorre na função main.rs (linha 46.)
+                ast_root.generate_initial_code()?;
+                Ok(ast_root)
+        } |
         { Ok(ASTNode::None) } ;
 
 item_list -> Result<ASTNode, ParsingError>:
@@ -51,20 +55,29 @@ function -> Result<ASTNode, ParsingError>:
                 let identifier = $1?;
                 let function_type = $4?;
                 let name = $lexer.span_str(identifier.span()?).to_string();
-                let arguments = $2?;
 
-                let entry = SymbolEntry::Function(FunctionSymbol::new(name, function_type, $span, $lexer, arguments));
+                add_name_to_last_symbol_table(name.clone());
+
+                let arguments = $2?;                
+                let function_label = get_new_label();
+
+
+                let entry = SymbolEntry::Function(FunctionSymbol::new(name, function_type, $span, $lexer, arguments, function_label));
                 add_symbol(entry)?;
                 let command = Box::new($5?);
-                let node = FunctionDeclaration::new($span, command, identifier.span()?);
+                let node = FunctionDeclaration::new($span, command, identifier.span()?, $lexer)?;
                 Ok(ASTNode::FunctionDeclaration(node))
         } ;
 
 parameters-> Result<Option<Vec<SymbolEntry>>, ParsingError>:
-        '(' scope_begin parameters_list ')' {
-                Ok(Some($3?))
+        '(' scope_begin_function parameters_list ')' {
+                let symbols = $3?;
+                change_base_function_offset(RESERV_MEM);
+                Ok(Some(symbols))
         }  |
-        '(' scope_begin ')' { Ok(None) };
+        '(' scope_begin_function ')' { 
+                                change_base_function_offset(RESERV_MEM);
+                                Ok(None) };
 
 parameters_list->  Result<Vec<SymbolEntry>, ParsingError>:
         type identifier ',' parameters_list {
@@ -90,7 +103,7 @@ function_body-> Result<ASTNode, ParsingError>:
 
 
 command_block -> Result<ASTNode, ParsingError>:
-        '{' scope_begin command_list scope_end '}' { $3 } |
+        '{' scope_begin_inner command_list scope_end '}' { $3 } |
         '{' '}' { Ok(ASTNode::None) };
 
 command_list -> Result<ASTNode, ParsingError>:
@@ -164,7 +177,7 @@ assignment-> Result<ASTNode, ParsingError>:
         verified_identifier '=' expression { 
                 let identifier = Box::new($1?);
                 let expression = Box::new($3?);
-                let node = AssignmentCommand::new($span, identifier, expression)?;
+                let node = AssignmentCommand::new($span, identifier, expression, $lexer)?;
                 Ok(ASTNode::AssignmentCommand(node))
         };
 
@@ -173,13 +186,13 @@ function_call -> Result<ASTNode, ParsingError>:
                 let expression = Box::new($3?);
                 let identifier = $1?;
                 check_declaration(&identifier, $lexer, UsageType::FunctionCall)?;
-                let node = FunctionCallCommand::new($span, expression, Box::new(identifier));
+                let node = FunctionCallCommand::new($span, expression, Box::new(identifier), $lexer)?;
                 Ok(ASTNode::FunctionCallCommand(node))
         } |
         identifier '(' ')'  {
                 let identifier = $1?;
                 check_declaration(&identifier, $lexer, UsageType::FunctionCall)?;
-                let node = FunctionCallCommand::new($span, Box::new(ASTNode::None), Box::new(identifier));
+                let node = FunctionCallCommand::new($span, Box::new(ASTNode::None), Box::new(identifier), $lexer)?;
                 Ok(ASTNode::FunctionCallCommand(node))
         } ;
 
@@ -352,7 +365,7 @@ verified_identifier -> Result<ASTNode, ParsingError>:
 
 identifier -> Result<ASTNode, ParsingError>:
         "TK_IDENTIFICADOR" { 
-                                let ((line,_), _) = $lexer.line_col($span);    
+                                let ((line,_), _) = $lexer.line_col($span);   
                                 Ok(ASTNode::Identifier(Identifier::new($span,line,$lexer)))} ;
 
 literal -> Result<ASTNode, ParsingError>:
@@ -360,7 +373,7 @@ literal -> Result<ASTNode, ParsingError>:
                                 let ((line,_), _) = $lexer.line_col($span);
                                 let literal_entry = SymbolEntry::from_lit_span($span, $lexer);
                                 add_symbol(literal_entry)?;
-                                Ok(ASTNode::LiteralInt(LiteralInt::new($span,line)))
+                                Ok(ASTNode::LiteralInt(LiteralInt::new($span,line,$lexer)))
                  } |
         "TK_LIT_FLOAT"    { 
                                 let ((line,_), _) = $lexer.line_col($span);   
@@ -383,9 +396,15 @@ type-> Result<Type, ParsingError>:
         "TK_PR_FLOAT" { Ok(Type::FLOAT) } |
         "TK_PR_BOOL" { Ok(Type::BOOL) } ;
 
-scope_begin -> Result<(), ParsingError>:
+scope_begin_function -> Result<(), ParsingError>:
         {
-                new_scope();
+                new_scope(ScopeType::Inner);
+                Ok(())
+        };
+
+scope_begin_inner -> Result<(), ParsingError>:
+        {
+                new_scope(ScopeType::Function);
                 Ok(())
         };
 
@@ -415,10 +434,14 @@ use etapa5::{ast::{
         add_symbol,
         new_scope,
         end_scope,
+        get_new_label,
+        change_base_function_offset,
+        add_name_to_last_symbol_table,      
         symbol_table::{
                 SymbolEntry,
                 CommonAttrs,
-                FunctionSymbol,    
+                FunctionSymbol,  
+                ScopeType,  
         },
         untyped::{
                 check_declaration,
@@ -426,6 +449,7 @@ use etapa5::{ast::{
                 UntypedVar,
                 LocalDeclrAux,
         },
+        iloc::RESERV_MEM,
         type_enum::{
                 Type,
         }};

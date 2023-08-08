@@ -36,7 +36,7 @@ impl ILOC {
             ILOC::LoadOffSet(op) => op.print(),
             ILOC::StoreImediate(op) => op.print(),
             ILOC::StoreOffSet(op) => op.print(),
-            ILOC::RegCopy(op) => op.print(),
+            ILOC::RegisterCopy(op) => op.print(),
             ILOC::Compare(op) => op.print(),
             ILOC::ConditionalBranch(op) => op.print(),
             ILOC::Jump(op) => op.print(),
@@ -73,9 +73,9 @@ impl ILOC {
                 inst.add_label(label);
                 ILOC::StoreOffSet(inst)
             }
-            ILOC::RegCopy(mut inst) => {
+            ILOC::RegisterCopy(mut inst) => {
                 inst.add_label(label);
-                ILOC::RegCopy(inst)
+                ILOC::RegisterCopy(inst)
             }
             ILOC::Compare(mut inst) => {
                 inst.add_label(label);

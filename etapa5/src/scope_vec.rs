@@ -38,15 +38,19 @@ impl ScopeVec {
 
     pub fn new_scope(&mut self, scope_type: ScopeType) {
         let mut table = SymbolTable::new(scope_type.clone());
-        match scope_type {
-            ScopeType::Inner => table.change_base_offset(self.0.last().unwrap().offset),
-            _ => (),
+        if let ScopeType::Inner = scope_type {
+            table.change_base_offset(self.0.last().unwrap().offset);
         }
         self.0.push(table);
     }
 
     pub fn pop_scope(&mut self) {
-        self.0.pop();
+        if let Some(table) = self.0.pop() {
+            if let Some(mut parent_table) = self.0.pop() {
+                parent_table.add_child_table(table);
+                self.0.push(parent_table);
+            }
+        }
     }
 
     pub fn add_symbol(&mut self, symbol: SymbolEntry) -> Result<(), ParsingError> {
@@ -79,6 +83,15 @@ impl ScopeVec {
         self.0.clear();
     }
 
+    pub fn change_base_function_offset(&mut self, parameters_size: u32) {
+        if let Some(mut table) = self.0.pop() {
+            if let ScopeType::Function = table.scope_type {
+                table.change_base_offset(parameters_size);
+            }
+            self.0.push(table);
+        }
+    }
+
     pub fn get_function_size(&self, name: String) -> Result<u32, ParsingError> {
         let global_table = self.0.first().ok_or(ParsingError::NoScope)?;
         let function_table = global_table
@@ -86,6 +99,7 @@ impl ScopeVec {
             .iter()
             .filter(|table| table.name == Some(name.clone()))
             .collect::<Vec<_>>();
+
         let function_table = function_table
             .first()
             .ok_or(ParsingError::UndeclaredError(name))?;
@@ -104,6 +118,16 @@ impl ScopeVec {
             }
         }
         false
+    }
+
+    pub fn add_name_to_last_symbol_table(&mut self, name: String) {
+        if let Some(mut table) = self.0.pop() {
+            if let Some(mut child) = table.children.pop() {
+                child.add_name(name);
+                table.children.push(child);
+            }
+            self.0.push(table);
+        }
     }
 
     pub fn get_variable_offset(
@@ -125,6 +149,7 @@ impl ScopeVec {
                     .iter()
                     .filter(|table| table.name == Some(function_name.clone()))
                     .collect::<Vec<_>>();
+
                 let function_table = function_table
                     .first()
                     .ok_or(ParsingError::UndeclaredError(function_name))?;

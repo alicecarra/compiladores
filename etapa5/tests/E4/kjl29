@@ -1,5 +1,5 @@
 int a;
-f()->int
+main()->int
 {
   {
 

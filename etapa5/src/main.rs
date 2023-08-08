@@ -43,9 +43,8 @@ fn main() -> ExitCode {
 
     match tree {
         Ok(tree) => {
-            let str = tree.node_to_string(&lexer);
-            if !str.is_empty() {
-                print!("{str}");
+            for op in tree.code() {
+                op.print();
             }
             ExitCode::SUCCESS
         }

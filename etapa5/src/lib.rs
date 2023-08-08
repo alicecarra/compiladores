@@ -44,14 +44,14 @@ pub fn add_symbol(_symbol_entry: SymbolEntry) -> Result<(), ParsingError> {
 }
 
 pub fn get_temporary() -> String {
-    let temp_val = TEMP_COUNTER.with(|counter| counter.borrow().clone());
+    let temp_val = TEMP_COUNTER.with(|counter| *counter.borrow());
     TEMP_COUNTER.with(|counter| *counter.borrow_mut() += 1);
 
     format!("r{temp_val}")
 }
 
 pub fn get_function_label(name: String) -> Result<String, ParsingError> {
-    return SCOPE_VEC.with(|stack| {
+    SCOPE_VEC.with(|stack| {
         let label = stack
             .borrow()
             .0
@@ -61,11 +61,11 @@ pub fn get_function_label(name: String) -> Result<String, ParsingError> {
             .ok_or(ParsingError::UndeclaredError(name))?
             .get_label();
         Ok(label)
-    });
+    })
 }
 
 pub fn get_function_size(name: String) -> Result<u32, ParsingError> {
-    return SCOPE_VEC.with(|stack| stack.borrow_mut().get_function_size(name));
+    SCOPE_VEC.with(|stack| stack.borrow_mut().get_function_size(name))
 }
 
 pub fn get_register(symbol: &SymbolEntry) -> String {
@@ -76,11 +76,23 @@ pub fn get_register(symbol: &SymbolEntry) -> String {
 }
 
 pub fn get_variable_offset(name: String) -> Result<Vec<(String, u32)>, ParsingError> {
-    return SCOPE_VEC.with(|stack| stack.borrow_mut().get_variable_offset(name));
+    SCOPE_VEC.with(|stack| stack.borrow_mut().get_variable_offset(name))
+}
+
+pub fn add_name_to_last_symbol_table(name: String) {
+    SCOPE_VEC.with(|stack| stack.borrow_mut().add_name_to_last_symbol_table(name));
+}
+
+pub fn change_base_function_offset(parameters_size: u32) {
+    SCOPE_VEC.with(|stack| {
+        stack
+            .borrow_mut()
+            .change_base_function_offset(parameters_size)
+    })
 }
 
 pub fn get_new_label() -> String {
-    let temp_val = LABEL_COUNTER.with(|counter| counter.borrow().clone());
+    let temp_val = LABEL_COUNTER.with(|counter| *counter.borrow());
     LABEL_COUNTER.with(|counter| *counter.borrow_mut() += 1);
 
     format!("L{temp_val}")
