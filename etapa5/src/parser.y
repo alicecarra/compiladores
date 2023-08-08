@@ -186,13 +186,13 @@ function_call -> Result<ASTNode, ParsingError>:
                 let expression = Box::new($3?);
                 let identifier = $1?;
                 check_declaration(&identifier, $lexer, UsageType::FunctionCall)?;
-                let node = FunctionCallCommand::new($span, expression, Box::new(identifier), $lexer)?;
+                let node = FunctionCallCommand::new($span, expression, Box::new(identifier))?;
                 Ok(ASTNode::FunctionCallCommand(node))
         } |
         identifier '(' ')'  {
                 let identifier = $1?;
                 check_declaration(&identifier, $lexer, UsageType::FunctionCall)?;
-                let node = FunctionCallCommand::new($span, Box::new(ASTNode::None), Box::new(identifier), $lexer)?;
+                let node = FunctionCallCommand::new($span, Box::new(ASTNode::None), Box::new(identifier))?;
                 Ok(ASTNode::FunctionCallCommand(node))
         } ;
 

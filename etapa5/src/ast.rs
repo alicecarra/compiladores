@@ -5,10 +5,9 @@ use lrpar::NonStreamingLexer;
 use crate::{
     errors::ParsingError,
     get_function_label, get_function_size, get_new_label, get_register, get_symbol, get_temporary,
-    get_variable_offset,
     iloc::{
         save_rfp_rsp, CompareInstruction, FullOperation, Jump, OneInputOneOutput,
-        OneInputTwoOutput, ILOC, RETVAL_ADDR, RET_ADDR,
+        OneInputTwoOutput, ILOC, RET_ADDR,
     },
     type_enum::Type,
     untyped::try_type_inference,
@@ -968,7 +967,6 @@ impl FunctionCallCommand {
         span: Span,
         expression: Box<ASTNode>,
         identifier: Box<ASTNode>,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let variable_type = identifier.get_type();
 
