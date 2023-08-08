@@ -8,7 +8,7 @@ use crate::{
     get_variable_offset,
     iloc::{
         save_rfp_rsp, CompareInstruction, FullOperation, Jump, OneInputOneOutput,
-        OneInputTwoOutput, ILOC, RETVAL_ADDR, RET_ADDR, RFP_ADDR, RSP_ADDR,
+        OneInputTwoOutput, ILOC, RETVAL_ADDR, RET_ADDR,
     },
     type_enum::Type,
     untyped::try_type_inference,
@@ -643,21 +643,21 @@ impl ASTNode {
 
     pub fn temporary(&self) -> String {
         match self {
-            ASTNode::FunctionCallCommand(node) => node.temporary_code.clone(),
-            ASTNode::OrExpression(node) => node.temporary_code.clone(),
-            ASTNode::AndExpression(node) => node.temporary_code.clone(),
-            ASTNode::EqualExpression(node) => node.temporary_code.clone(),
-            ASTNode::NotEqualExpression(node) => node.temporary_code.clone(),
-            ASTNode::LessThanExpression(node) => node.temporary_code.clone(),
-            ASTNode::GreaterThanExpression(node) => node.temporary_code.clone(),
-            ASTNode::LessEqualExpression(node) => node.temporary_code.clone(),
-            ASTNode::GreaterEqualExpression(node) => node.temporary_code.clone(),
-            ASTNode::AdditionExpression(node) => node.temporary_code.clone(),
-            ASTNode::SubtractionExpression(node) => node.temporary_code.clone(),
-            ASTNode::MultiplyExpression(node) => node.temporary_code.clone(),
-            ASTNode::DivisionExpression(node) => node.temporary_code.clone(),
-            ASTNode::LiteralInt(node) => node.temporary_code.clone(),
-            ASTNode::Identifier(node) => node.temporary_code.clone(),
+            ASTNode::FunctionCallCommand(node) => node.temporary.clone(),
+            ASTNode::OrExpression(node) => node.temporary.clone(),
+            ASTNode::AndExpression(node) => node.temporary.clone(),
+            ASTNode::EqualExpression(node) => node.temporary.clone(),
+            ASTNode::NotEqualExpression(node) => node.temporary.clone(),
+            ASTNode::LessThanExpression(node) => node.temporary.clone(),
+            ASTNode::GreaterThanExpression(node) => node.temporary.clone(),
+            ASTNode::LessEqualExpression(node) => node.temporary.clone(),
+            ASTNode::GreaterEqualExpression(node) => node.temporary.clone(),
+            ASTNode::AdditionExpression(node) => node.temporary.clone(),
+            ASTNode::SubtractionExpression(node) => node.temporary.clone(),
+            ASTNode::MultiplyExpression(node) => node.temporary.clone(),
+            ASTNode::DivisionExpression(node) => node.temporary.clone(),
+            ASTNode::LiteralInt(node) => node.temporary.clone(),
+            ASTNode::Identifier(node) => node.temporary.clone(),
             ASTNode::FunctionDeclaration(_) => unimplemented!("Implementação não realizada"),
             ASTNode::InitializedVariable(_) => unimplemented!("Implementação não realizada"),
             ASTNode::AssignmentCommand(_) => unimplemented!("Implementação não realizada"),
@@ -797,7 +797,6 @@ impl FunctionDeclaration {
 
             code.extend(comm.code());
 
-            code.extend(return_to_caller_instructions());
             code
         };
 
@@ -961,7 +960,7 @@ pub struct FunctionCallCommand {
     pub name: Box<ASTNode>,
     pub variable_type: Type,
     pub code: Vec<ILOC>,
-    pub temporary_code: String,
+    pub temporary: String,
 }
 
 impl FunctionCallCommand {
@@ -973,61 +972,7 @@ impl FunctionCallCommand {
     ) -> Result<Self, ParsingError> {
         let variable_type = identifier.get_type();
 
-        let temporary_code = get_temporary();
-
-        let code = {
-            let mut code = vec![];
-            let temps = expression.get_temporary_vecs();
-            let name = lexer.span_str(identifier.span()?).to_string();
-            let mut offset = get_variable_offset(name.clone())?;
-            offset.sort_by_key(|vals| vals.1);
-
-            code.extend(expression.code());
-            temps
-                .into_iter()
-                .rev()
-                .zip(offset)
-                .for_each(|(temp, (_key, desloc))| {
-                    let load_temp_to_param = ILOC::StoreOffSet(OneInputTwoOutput::new(
-                        "storeAI".to_string(),
-                        temp,
-                        "rsp".to_string(),
-                        desloc.to_string(),
-                    ));
-                    code.push(load_temp_to_param);
-                });
-
-            let temp_rpc = get_temporary();
-            let load_rpc = ILOC::Arithmetic(FullOperation::new(
-                "addI".to_string(),
-                "rpc".to_string(),
-                3.to_string(),
-                temp_rpc.clone(),
-            ));
-            let ret_addr_save = ILOC::StoreOffSet(OneInputTwoOutput::new(
-                "storeAI".to_string(),
-                temp_rpc,
-                "rsp".to_string(),
-                RET_ADDR.to_string(),
-            ));
-            let fn_label = get_function_label(name)?;
-            let jump_fn = ILOC::Jump(Jump::new("jumpI".to_string(), fn_label));
-
-            code.extend(save_rfp_rsp());
-            code.push(load_rpc);
-            code.push(ret_addr_save);
-            code.push(jump_fn);
-
-            let retrieve_ret_val = ILOC::LoadOffSet(FullOperation::new(
-                "loadAI".to_string(),
-                "rsp".to_string(),
-                RETVAL_ADDR.to_string(),
-                temporary_code.clone(),
-            ));
-            code.push(retrieve_ret_val);
-
-            code
-        };
+        let temporary = get_temporary();
 
         Ok(Self {
             span,
@@ -1035,8 +980,8 @@ impl FunctionCallCommand {
             name: identifier,
             next: Box::new(ASTNode::None),
             variable_type,
-            code,
-            temporary_code,
+            code: vec![],
+            temporary,
         })
     }
 
@@ -1058,26 +1003,11 @@ impl ReturnCommand {
     pub fn new(span: Span, expression: Box<ASTNode>) -> Self {
         let variable_type = expression.get_type();
 
-        let code = {
-            let mut code = vec![];
-            code.extend(expression.code());
-            let exp_temp = expression.temporary();
-            let save_ret_value = ILOC::StoreOffSet(OneInputTwoOutput::new(
-                "storeAI".to_string(),
-                exp_temp,
-                "rfp".to_string(),
-                RETVAL_ADDR.to_string(),
-            ));
-            code.push(save_ret_value);
-            code.extend(return_to_caller_instructions());
-            code
-        };
-
         Self {
             span,
             expression,
             variable_type,
-            code,
+            code: vec![],
         }
     }
 }
@@ -1122,7 +1052,7 @@ impl WhileCommand {
                 label_later.clone(),
             ));
             let true_nop = ILOC::Nop(Some(label_true));
-            let jump_back = ILOC::Jump(Jump::new("jumpI".to_string(), label_expr.clone()));
+            let jump_back = ILOC::Jump(Jump::new("jumpI".to_string(), label_expr));
             let later_nop = ILOC::Nop(Some(label_later));
 
             let mut code = vec![];
@@ -1240,7 +1170,7 @@ pub struct BinaryOperation {
     pub child_right: Box<ASTNode>,
     pub next: Box<ASTNode>,
     pub variable_type: Type,
-    temporary_code: String,
+    temporary: String,
     code: Vec<ILOC>,
 }
 
@@ -1249,17 +1179,16 @@ impl BinaryOperation {
         span: Span,
         child_left: Box<ASTNode>,
         child_right: Box<ASTNode>,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<Self, ParsingError> {
         let variable_type = try_type_inference(child_left.get_type(), child_right.get_type())?;
 
-        let temporary_code = get_temporary();
+        let temporary = get_temporary();
         let code = {
             let inst = ILOC::Arithmetic(FullOperation::new(
                 "".to_string(),
                 child_left.temporary(),
                 child_right.temporary(),
-                temporary_code.clone(),
+                temporary.clone(),
             ));
             let mut code = vec![];
 
@@ -1275,7 +1204,7 @@ impl BinaryOperation {
             next: Box::new(ASTNode::None),
             variable_type,
             code,
-            temporary_code,
+            temporary,
         })
     }
 
@@ -1285,7 +1214,7 @@ impl BinaryOperation {
     }
 
     pub fn get_temporary_vec(&self) -> Vec<String> {
-        let mut temps = vec![self.temporary_code.clone()];
+        let mut temps = vec![self.temporary.clone()];
         temps.extend(self.next.get_temporary_vecs());
         temps
     }
@@ -1298,7 +1227,7 @@ pub struct UnaryOperation {
     pub next: Box<ASTNode>,
     pub variable_type: Type,
     code: Vec<ILOC>,
-    temporary_code: String,
+    temporary: String,
 }
 
 impl UnaryOperation {
@@ -1310,7 +1239,7 @@ impl UnaryOperation {
             next: Box::new(ASTNode::None),
             variable_type,
             code: vec![],
-            temporary_code: "".to_string(),
+            temporary: "".to_string(),
         }
     }
 
@@ -1326,18 +1255,18 @@ pub struct LiteralInt {
     pub line: usize,
     pub next: Box<ASTNode>,
     code: Vec<ILOC>,
-    temporary_code: String,
+    temporary: String,
 }
 
 impl LiteralInt {
     pub fn new(span: Span, line: usize, lexer: &dyn NonStreamingLexer<DefaultLexerTypes>) -> Self {
         let val = lexer.span_str(span).to_string();
-        let temporary_code = get_temporary();
+        let temporary = get_temporary();
         let code = {
             let inst = ILOC::LoadImediate(OneInputOneOutput::new(
                 "loadI".to_string(),
                 val,
-                temporary_code.clone(),
+                temporary.clone(),
             ));
             vec![inst]
         };
@@ -1346,7 +1275,7 @@ impl LiteralInt {
             line,
             next: Box::new(ASTNode::None),
             code,
-            temporary_code,
+            temporary,
         }
     }
 
@@ -1356,7 +1285,7 @@ impl LiteralInt {
     }
 
     pub fn get_temporary_vec(&self) -> Vec<String> {
-        let mut temps = vec![self.temporary_code.clone()];
+        let mut temps = vec![self.temporary.clone()];
         temps.extend(self.next.get_temporary_vecs());
         temps
     }
@@ -1417,7 +1346,7 @@ pub struct Identifier {
     pub next: Box<ASTNode>,
     pub variable_type: Type,
     code: Vec<ILOC>,
-    temporary_code: String,
+    temporary: String,
 }
 
 impl Identifier {
@@ -1433,7 +1362,7 @@ impl Identifier {
             line,
             variable_type,
             code: vec![],
-            temporary_code: "".to_string(),
+            temporary: "".to_string(),
         }
     }
 
@@ -1450,50 +1379,20 @@ impl Identifier {
             let symbol = get_symbol(self.span, _lexer)?;
             let desloc = symbol.offset().to_string();
             let reg = get_register(&symbol);
-            self.temporary_code = get_temporary();
+            self.temporary = get_temporary();
             self.code = vec![ILOC::LoadOffSet(FullOperation::new(
                 "loadAI".to_string(),
                 reg,
                 desloc,
-                self.temporary_code.clone(),
+                self.temporary.clone(),
             ))];
         };
         Ok(())
     }
 
     pub fn get_temps(&self) -> Vec<String> {
-        let mut temps = vec![self.temporary_code.clone()];
+        let mut temps = vec![self.temporary.clone()];
         temps.extend(self.next.get_temporary_vecs());
         temps
     }
-}
-
-fn return_to_caller_instructions() -> Vec<ILOC> {
-    let mut code = vec![];
-    let restore_rsp = ILOC::LoadOffSet(FullOperation::new(
-        "loadAI".to_string(),
-        "rfp".to_string(),
-        RSP_ADDR.to_string(),
-        "rsp".to_string(),
-    ));
-    let restore_rfp = ILOC::LoadOffSet(FullOperation::new(
-        "loadAI".to_string(),
-        "rfp".to_string(),
-        RFP_ADDR.to_string(),
-        "rfp".to_string(),
-    ));
-
-    let ret_addr_temp = get_temporary();
-    let load_ret_addr = ILOC::LoadOffSet(FullOperation::new(
-        "loadAI".to_string(),
-        "rfp".to_string(),
-        RET_ADDR.to_string(),
-        ret_addr_temp.clone(),
-    ));
-    let return_to_caller = ILOC::Jump(Jump::new("jump".to_string(), ret_addr_temp));
-    code.push(load_ret_addr);
-    code.push(restore_rsp);
-    code.push(restore_rfp);
-    code.push(return_to_caller);
-    code
 }

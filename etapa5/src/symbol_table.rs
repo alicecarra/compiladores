@@ -19,7 +19,7 @@ pub enum SymbolEntry {
 }
 
 pub fn check_global(symbol: &SymbolEntry) -> bool {
-    return SCOPE_VEC.with(|stack| stack.borrow().is_global(symbol));
+    SCOPE_VEC.with(|stack| stack.borrow().is_global(symbol))
 }
 
 impl SymbolEntry {
@@ -104,7 +104,7 @@ impl SymbolEntry {
         match self {
             SymbolEntry::Function(content) => content.label.clone(),
             symbol => {
-                panic!("Somente funcções possuem label. Tentando extrair label de: {symbol:#?}")
+                panic!("Somente funções possuem label. Tentando extrair label de: {symbol:#?}")
             }
         }
     }
@@ -132,11 +132,8 @@ impl SymbolEntry {
     }
 
     pub fn update_offset(&mut self, offset: u32) {
-        match self {
-            SymbolEntry::Variable(var) => {
-                var.offset += offset;
-            }
-            _ => (), // only simple vars can update deslocs inside functions
+        if let SymbolEntry::Variable(var) = self {
+            var.offset += offset;
         }
     }
 
@@ -293,15 +290,23 @@ impl SymbolTable {
         Ok(())
     }
 
+    pub fn add_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+
     pub fn get(&self, key: &String) -> Option<&SymbolEntry> {
         self.table.get(key)
+    }
+
+    pub fn add_child_table(&mut self, table: SymbolTable) {
+        self.children.push(Box::new(table));
     }
 
     pub fn get_size(&self) -> u32 {
         let mut size = self
             .table
-            .iter()
-            .map(|(_, symbol)| symbol.size())
+            .values()
+            .map(|symbol| symbol.size())
             .reduce(|acc, size| acc + size)
             .unwrap_or(0);
         size = size.max(
