@@ -4,11 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_function_label, get_function_size, get_new_label, get_register, get_symbol, get_temporary,
-    iloc::{
-        save_rfp_rsp, CompareInstruction, FullOperation, Jump, OneInputOneOutput,
-        OneInputTwoOutput, ILOC, RET_ADDR,
-    },
+    get_function_size, get_new_label, get_register, get_symbol, get_temporary,
+    iloc::{CompareInstruction, FullOperation, Jump, OneInputOneOutput, OneInputTwoOutput, ILOC},
     type_enum::Type,
     untyped::try_type_inference,
 };
@@ -689,41 +686,6 @@ impl ASTNode {
     pub fn generate_initial_code(&mut self) -> Result<(), ParsingError> {
         {
             let mut code = vec![];
-            let load_rfp = ILOC::LoadImediate(OneInputOneOutput::new(
-                "loadI".to_string(),
-                "1024".to_string(),
-                "rfp".to_string(),
-            ));
-            let load_rsp = ILOC::LoadImediate(OneInputOneOutput::new(
-                "loadI".to_string(),
-                "1024".to_string(),
-                "rsp".to_string(),
-            ));
-
-            let temp_rpc = get_temporary();
-            let load_rpc = ILOC::Arithmetic(FullOperation::new(
-                "addI".to_string(),
-                "rpc".to_string(),
-                "3".to_string(),
-                temp_rpc.clone(),
-            ));
-            let ret_addr_save = ILOC::StoreOffSet(OneInputTwoOutput::new(
-                "storeAI".to_string(),
-                temp_rpc,
-                "rsp".to_string(),
-                RET_ADDR.to_string(),
-            ));
-            let main_label = get_function_label("main".to_string())?;
-            let jump_main = ILOC::Jump(Jump::new("jumpI".to_string(), main_label));
-
-            code.push(load_rfp);
-            code.push(load_rsp);
-            code.extend(save_rfp_rsp());
-            code.push(load_rpc);
-            code.push(ret_addr_save);
-            code.push(jump_main);
-            code.push(ILOC::Halt);
-
             match self {
                 ASTNode::FunctionDeclaration(node) => {
                     code.extend(node.code.clone());

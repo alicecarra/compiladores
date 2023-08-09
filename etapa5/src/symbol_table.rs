@@ -4,9 +4,7 @@ use cfgrammar::Span;
 use lrlex::DefaultLexerTypes;
 use lrpar::NonStreamingLexer;
 
-use crate::{
-    errors::ParsingError, iloc::RESERV_MEM, type_enum::Type, untyped::UntypedVar, SCOPE_VEC,
-};
+use crate::{errors::ParsingError, type_enum::Type, untyped::UntypedVar, SCOPE_VEC};
 
 #[derive(Debug, Clone)]
 pub enum SymbolEntry {
@@ -317,7 +315,7 @@ impl SymbolTable {
                 .unwrap_or(0),
         );
 
-        size + RESERV_MEM
+        size
     }
 }
 

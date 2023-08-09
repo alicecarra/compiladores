@@ -10,16 +10,8 @@ pub enum ILOC {
     ConditionalBranch(OneInputTwoOutput),
     Jump(Jump),
     Nop(Option<String>),
-    Halt,
     Empty,
 }
-
-pub static RETVAL_ADDR: u32 = 0;
-pub static RFP_ADDR: u32 = 4;
-pub static RSP_ADDR: u32 = 8;
-pub static RET_ADDR: u32 = 12;
-pub static ADDR_SIZE: u32 = 4;
-pub static RESERV_MEM: u32 = ADDR_SIZE * 4;
 
 impl ILOC {
     pub fn add_arithmetic_instruction(&mut self, name: String) {
@@ -46,7 +38,6 @@ impl ILOC {
                 }
                 println!("nop");
             }
-            ILOC::Halt => println!("halt"),
             ILOC::Empty => (),
         }
     }
@@ -90,7 +81,6 @@ impl ILOC {
                 ILOC::Jump(inst)
             }
             ILOC::Nop(_) => ILOC::Nop(Some(label)),
-            ILOC::Halt => ILOC::Halt,
             ILOC::Empty => ILOC::Empty,
         }
     }
@@ -267,22 +257,4 @@ impl Jump {
     pub fn add_label(&mut self, label: String) {
         self.label = Some(label);
     }
-}
-
-pub fn save_rfp_rsp() -> Vec<ILOC> {
-    let save_rfp = ILOC::StoreOffSet(OneInputTwoOutput::new(
-        "storeAI".to_string(),
-        "rfp".to_string(),
-        "rsp".to_string(),
-        RFP_ADDR.to_string(),
-    ));
-
-    let save_rsp = ILOC::StoreOffSet(OneInputTwoOutput::new(
-        "storeAI".to_string(),
-        "rsp".to_string(),
-        "rsp".to_string(),
-        RSP_ADDR.to_string(),
-    ));
-
-    vec![save_rfp, save_rsp]
 }

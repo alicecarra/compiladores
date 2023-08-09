@@ -71,12 +71,10 @@ function -> Result<ASTNode, ParsingError>:
 
 parameters-> Result<Option<Vec<SymbolEntry>>, ParsingError>:
         '(' scope_begin_function parameters_list ')' {
-                let symbols = $3?;
-                change_base_function_offset(RESERV_MEM);
+                let symbols = $3?;         
                 Ok(Some(symbols))
         }  |
-        '(' scope_begin_function ')' { 
-                                change_base_function_offset(RESERV_MEM);
+        '(' scope_begin_function ')' {                              
                                 Ok(None) };
 
 parameters_list->  Result<Vec<SymbolEntry>, ParsingError>:
@@ -435,7 +433,6 @@ use etapa5::{ast::{
         new_scope,
         end_scope,
         get_new_label,
-        change_base_function_offset,
         add_name_to_last_symbol_table,      
         symbol_table::{
                 SymbolEntry,
@@ -449,7 +446,6 @@ use etapa5::{ast::{
                 UntypedVar,
                 LocalDeclrAux,
         },
-        iloc::RESERV_MEM,
         type_enum::{
                 Type,
         }};
