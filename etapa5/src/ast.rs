@@ -673,16 +673,6 @@ impl ASTNode {
         matches!(self, ASTNode::InitializedVariable(_))
     }
 
-    pub fn generate_load(
-        &mut self,
-        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
-    ) -> Result<(), ParsingError> {
-        match self {
-            ASTNode::Identifier(node) => node.gen_load(lexer),
-            _ => Ok(()),
-        }
-    }
-
     pub fn generate_initial_code(&mut self) -> Result<(), ParsingError> {
         {
             let mut code = vec![];
@@ -739,22 +729,8 @@ impl FunctionDeclaration {
         let code = {
             let symbol = get_symbol(name, lexer)?;
             let label = symbol.get_label();
-            let fun_size = get_function_size(symbol.get_key())?;
 
             let mut code = vec![ILOC::Nop(Some(label))];
-            let update_rfp = ILOC::LoadImediate(OneInputOneOutput::new(
-                "i2i".to_string(),
-                "rsp".to_string(),
-                "rfp".to_string(),
-            ));
-            let update_rsp = ILOC::Arithmetic(FullOperation::new(
-                "addI".to_string(),
-                "rsp".to_string(),
-                fun_size.to_string(),
-                "rsp".to_string(),
-            ));
-            code.push(update_rfp);
-            code.push(update_rsp);
 
             code.extend(comm.code());
 
@@ -893,6 +869,7 @@ impl AssignmentCommand {
                 symbol.offset().to_string(),
             ));
             let mut code = vec![];
+
             code.extend(expression.code());
             code.push(inst);
             code
@@ -909,7 +886,8 @@ impl AssignmentCommand {
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
@@ -1025,6 +1003,7 @@ impl WhileCommand {
             code.extend(first_command.code());
             code.push(jump_back);
             code.push(later_nop);
+
             code
         };
 
@@ -1104,6 +1083,7 @@ impl IfCommand {
             code.push(false_nop);
             code.extend(false_first_command.code());
             code.push(later_nop);
+
             code
         };
 
@@ -1119,7 +1099,8 @@ impl IfCommand {
     }
 
     pub fn add_next(&mut self, next: Box<ASTNode>) {
-        self.next = next;
+        self.next = next.clone();
+        self.code.extend(next.code());
     }
 }
 
