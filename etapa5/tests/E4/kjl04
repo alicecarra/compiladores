@@ -1,14 +1,6 @@
 //ERR_DECLARED
-f()->int {
-  return 0;
+main()->int {
 }
 int a;
 
-g()->int {
-  return 0;
-}
-
-h()->int {
-  return 0;
-}
 int a;

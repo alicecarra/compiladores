@@ -1,6 +1,5 @@
 //ERR_VARIABLE
-f()->int {
+main()->int {
   int a;
-  a();
-  return 0;
+  a(); 
 }

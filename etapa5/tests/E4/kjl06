@@ -1,5 +1,4 @@
-//ERR_FUNCTION
-g()->int { return 0; }
-f()->int {
+//ERR_UNDECLARED
+main()->int {
   g = 2;
 }

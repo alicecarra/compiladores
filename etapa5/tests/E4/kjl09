@@ -1,5 +1,4 @@
 //ERR_UNDECLARED
-f()->int {
-    a = 2;
-    return 0;
+main()->int {
+    a = 2;    
 }

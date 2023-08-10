@@ -1,6 +1,5 @@
 //ERR_UNDECLARED
-f()->int {
-    float z <= 2.3;
+main()->int {
+    int z <= 2;
     a = z;
-    return 0;
 }

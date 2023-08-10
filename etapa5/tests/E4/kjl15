@@ -1,6 +1,5 @@
 //ERR_UNDECLARED
 f()->int {
-    float car <= 2.3;
+    int car <= 3;
     a = car;
-    return 0;
 }
