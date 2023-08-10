@@ -469,6 +469,12 @@ impl ASTNode {
                         }
                         ILOC::Compare(instruction)
                     }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_EQ".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
+                    }
                     instruction => instruction,
                 })
                 .collect(),
@@ -482,6 +488,12 @@ impl ASTNode {
                             instruction.name = "cmp_NE".to_string();
                         }
                         ILOC::Compare(instruction)
+                    }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_NE".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
                     }
                     instruction => instruction,
                 })
@@ -497,6 +509,12 @@ impl ASTNode {
                         }
                         ILOC::Compare(inst)
                     }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LT".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
+                    }
                     instruction => instruction,
                 })
                 .collect(),
@@ -510,6 +528,12 @@ impl ASTNode {
                             inst.name = "cmp_GT".to_string();
                         }
                         ILOC::Compare(inst)
+                    }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GT".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
                     }
                     instruction => instruction,
                 })
@@ -525,6 +549,12 @@ impl ASTNode {
                         }
                         ILOC::Compare(inst)
                     }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_LE".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
+                    }
                     instruction => instruction,
                 })
                 .collect(),
@@ -538,6 +568,12 @@ impl ASTNode {
                             inst.name = "cmp_GE".to_string();
                         }
                         ILOC::Compare(inst)
+                    }
+                    ILOC::Arithmetic(mut inst) => {
+                        if inst.name.is_empty() {
+                            inst.name = "cmp_GE".to_string();
+                        }
+                        ILOC::Arithmetic(inst)
                     }
                     instruction => instruction,
                 })
@@ -671,6 +707,16 @@ impl ASTNode {
 
     pub fn is_initialized_variable(&self) -> bool {
         matches!(self, ASTNode::InitializedVariable(_))
+    }
+
+    pub fn generate_load(
+        &mut self,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+    ) -> Result<(), ParsingError> {
+        match self {
+            ASTNode::Identifier(node) => node.generate_load(lexer),
+            _ => Ok(()),
+        }
     }
 
     pub fn generate_initial_code(&mut self) -> Result<(), ParsingError> {
@@ -1083,7 +1129,6 @@ impl IfCommand {
             code.push(false_nop);
             code.extend(false_first_command.code());
             code.push(later_nop);
-
             code
         };
 
@@ -1312,7 +1357,7 @@ impl Identifier {
         self.code.extend(next.code());
     }
 
-    pub fn gen_load(
+    pub fn generate_load(
         &mut self,
         _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {

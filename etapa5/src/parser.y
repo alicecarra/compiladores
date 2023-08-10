@@ -350,7 +350,11 @@ expression8-> Result<ASTNode, ParsingError>:
         operand         { $1 } ;
 
 operand -> Result<ASTNode, ParsingError>:
-        verified_identifier      { $1 } |        
+        verified_identifier      { 
+                let mut identifier = $1?;
+                identifier.generate_load($lexer)?;
+                Ok(identifier)        
+                } |        
         function_call   { $1 } |  
         literal         { $1 } ;
 
