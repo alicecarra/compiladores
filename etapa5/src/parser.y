@@ -134,7 +134,7 @@ variable_declare -> Result<ASTNode, ParsingError>:
                         let symbol = SymbolEntry::from_untyped_var(variable, variable_type.clone());
                         add_symbol(symbol)?;
                 }
-                let node = auxiliar.node.update_type(variable_type, $lexer)?;
+                let node = auxiliar.node.update_type(variable_type, $lexer)?.generate_my_code($lexer)?;
                 Ok(node)
         } ;
 

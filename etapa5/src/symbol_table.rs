@@ -145,6 +145,16 @@ impl SymbolEntry {
             SymbolEntry::None => 0,
         }
     }
+
+    pub fn add_offset(&mut self, desloc: u32) -> bool {
+        match self {
+            SymbolEntry::Variable(var) => {
+                var.offset = desloc;
+                true
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -269,7 +279,7 @@ impl SymbolTable {
             .collect();
     }
 
-    pub fn add_symbol(&mut self, key: String, symbol: SymbolEntry) -> Result<(), ParsingError> {
+    pub fn add_symbol(&mut self, key: String, mut symbol: SymbolEntry) -> Result<(), ParsingError> {
         if let Some(declared) = self.table.get(&key) {
             if declared.is_literal() {
                 return Ok(());
@@ -281,6 +291,10 @@ impl SymbolTable {
                 "{} em ({s_line},{s_col}): {} com identificador ({key}) foi declarado em linha ({},{}).",
                 symbol.type_to_str(), declared.type_to_str(), line, col
             )));
+        }
+
+        if symbol.add_offset(self.offset) {
+            self.offset += symbol.size();
         }
 
         self.table.insert(key, symbol);
