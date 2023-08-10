@@ -4,7 +4,7 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     errors::ParsingError,
-    get_function_size, get_new_label, get_register, get_symbol, get_temporary,
+    get_new_label, get_register, get_symbol, get_temporary,
     iloc::{CompareInstruction, FullOperation, Jump, OneInputOneOutput, OneInputTwoOutput, ILOC},
     type_enum::Type,
     untyped::try_type_inference,
