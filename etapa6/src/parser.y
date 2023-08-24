@@ -443,7 +443,6 @@ use etapa6::{ast::{
         add_symbol,
         new_scope,
         end_scope,
-        get_new_label,
         add_name_to_last_symbol_table,      
         symbol_table::{
                 SymbolEntry,
