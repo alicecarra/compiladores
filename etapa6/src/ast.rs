@@ -4,8 +4,8 @@ use lrpar::NonStreamingLexer;
 
 use crate::{
     asm::{
-        AssemblerInstruction, CompareInstruction, CompareRegister, DivisionInstruction,
-        FullOperator, Jump, Move, OneInputOneOutput,
+        AssemblerInstruction, CompareInstruction, CompareRegister, Directive, DivisionInstruction,
+        FullOperator, Jump, Move, OneInputOneOutput, StackInstruction,
     },
     errors::ParsingError,
     get_new_label, get_new_temporary, get_symbol, get_temporary,
@@ -23,14 +23,14 @@ pub enum ASTNode {
     ReturnCommand(ReturnCommand),
     WhileCommand(WhileCommand),
     IfCommand(IfCommand),
-    OrExpression(BinaryOperation),
-    AndExpression(BinaryOperation),
-    EqualExpression(BinaryOperation),
-    NotEqualExpression(BinaryOperation),
-    LessThanExpression(BinaryOperation),
-    GreaterThanExpression(BinaryOperation),
-    LessEqualExpression(BinaryOperation),
-    GreaterEqualExpression(BinaryOperation),
+    OrExpression(CompareOperation),
+    AndExpression(CompareOperation),
+    EqualExpression(CompareOperation),
+    NotEqualExpression(CompareOperation),
+    LessThanExpression(CompareOperation),
+    GreaterThanExpression(CompareOperation),
+    LessEqualExpression(CompareOperation),
+    GreaterEqualExpression(CompareOperation),
     AdditionExpression(BinaryOperation),
     SubtractionExpression(BinaryOperation),
     MultiplyExpression(BinaryOperation),
@@ -74,7 +74,7 @@ impl ASTNode {
             }
             ASTNode::AndExpression(mut node) => {
                 node.add_next(next);
-                ASTNode::AdditionExpression(node)
+                ASTNode::AndExpression(node)
             }
             ASTNode::EqualExpression(mut node) => {
                 node.add_next(next);
@@ -234,8 +234,16 @@ impl ASTNode {
             | ASTNode::LessThanExpression(node)
             | ASTNode::GreaterThanExpression(node)
             | ASTNode::LessEqualExpression(node)
-            | ASTNode::GreaterEqualExpression(node)
-            | ASTNode::AdditionExpression(node)
+            | ASTNode::GreaterEqualExpression(node) => {
+                current_string += &node.child_left.parent_to_string(self);
+                current_string += &node.child_right.parent_to_string(self);
+                current_string += &node.next.parent_to_string(self);
+
+                current_string += &node.child_left.node_to_string(lexer);
+                current_string += &node.child_right.node_to_string(lexer);
+                current_string += &node.next.node_to_string(lexer);
+            }
+            ASTNode::AdditionExpression(node)
             | ASTNode::SubtractionExpression(node)
             | ASTNode::MultiplyExpression(node)
             | ASTNode::ModExpression(node) => {
@@ -411,14 +419,14 @@ impl ASTNode {
             ASTNode::ReturnCommand(node) => node.variable_type.clone(),
             ASTNode::WhileCommand(node) => node.variable_type.clone(),
             ASTNode::IfCommand(node) => node.variable_type.clone(),
-            ASTNode::OrExpression(node) => node.variable_type.clone(),
-            ASTNode::AndExpression(node) => node.variable_type.clone(),
-            ASTNode::EqualExpression(node) => node.variable_type.clone(),
-            ASTNode::NotEqualExpression(node) => node.variable_type.clone(),
-            ASTNode::LessThanExpression(node) => node.variable_type.clone(),
-            ASTNode::GreaterThanExpression(node) => node.variable_type.clone(),
-            ASTNode::LessEqualExpression(node) => node.variable_type.clone(),
-            ASTNode::GreaterEqualExpression(node) => node.variable_type.clone(),
+            ASTNode::OrExpression(node) => node.compare_type.clone(),
+            ASTNode::AndExpression(node) => node.compare_type.clone(),
+            ASTNode::EqualExpression(node) => node.compare_type.clone(),
+            ASTNode::NotEqualExpression(node) => node.compare_type.clone(),
+            ASTNode::LessThanExpression(node) => node.compare_type.clone(),
+            ASTNode::GreaterThanExpression(node) => node.compare_type.clone(),
+            ASTNode::LessEqualExpression(node) => node.compare_type.clone(),
+            ASTNode::GreaterEqualExpression(node) => node.compare_type.clone(),
             ASTNode::AdditionExpression(node) => node.variable_type.clone(),
             ASTNode::SubtractionExpression(node) => node.variable_type.clone(),
             ASTNode::MultiplyExpression(node) => node.variable_type.clone(),
@@ -721,9 +729,45 @@ impl FunctionDeclaration {
             let symbol = get_symbol(name, lexer)?;
             let label = symbol.get_label();
 
-            let mut code = vec![AssemblerInstruction::Nop(Some(label))];
+            let mut code = vec![];
+
+            let text =
+                AssemblerInstruction::Directive(Directive::new("text".to_string(), None, None));
+            let global_declr = AssemblerInstruction::Directive(Directive::new(
+                "globl".to_string(),
+                Some(label.clone()),
+                None,
+            ));
+            let type_declr = AssemblerInstruction::Directive(Directive::new(
+                "type".to_string(),
+                Some(label.clone()),
+                Some("@function".to_string()),
+            ));
+
+            let push_rbp = AssemblerInstruction::StackInstruction(StackInstruction::new(
+                "pushq".to_string(),
+                "%rbp".to_string(),
+            ))
+            .add_label(label);
+
+            let update_rfp = AssemblerInstruction::MoveImediate(OneInputOneOutput::new(
+                "movq".to_string(),
+                "%rsp".to_string(),
+                "%rbp".to_string(),
+            ));
+
+            let ret = AssemblerInstruction::SingleInstruction(None, "ret".to_string());
+            let leave = AssemblerInstruction::SingleInstruction(None, "leave".to_string());
+
+            code.push(text);
+            code.push(global_declr);
+            code.push(type_declr);
+            code.push(push_rbp);
+            code.push(update_rfp);
 
             code.extend(comm.code());
+            code.push(leave);
+            code.push(ret);
 
             code
         };
@@ -806,15 +850,15 @@ impl InitializedVariable {
 
     pub fn generate_my_code(
         &mut self,
-        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {
         {
             if let Some(next) = self.next.clone() {
-                let next = next.generate_my_code(_lexer)?;
+                let next = next.generate_my_code(lexer)?;
                 self.next = Some(Box::new(next));
             }
 
-            let symbol = get_symbol(self.identifier.span()?, _lexer)?;
+            let symbol = get_symbol(self.identifier.span()?, lexer)?;
 
             let val = get_symbol_value(&symbol);
             let inst: AssemblerInstruction = AssemblerInstruction::Move(Move::new(
@@ -935,11 +979,25 @@ impl ReturnCommand {
     pub fn new(span: Span, expression: Box<ASTNode>) -> Self {
         let variable_type = expression.get_type();
 
+        let code = {
+            let mut code = vec![];
+            code.extend(expression.code());
+            let exp_temp = expression.temporary();
+            let save_return_value = AssemblerInstruction::Move(Move::new(
+                "movl".to_string(),
+                exp_temp,
+                "%eax".to_string(),
+            ));
+            code.push(save_return_value);
+
+            code
+        };
+
         Self {
             span,
             expression,
             variable_type,
-            code: vec![],
+            code,
         }
     }
 }
@@ -963,11 +1021,11 @@ impl WhileCommand {
         let variable_type = expression.get_type();
 
         let code = {
-            let label_expr = get_new_label();
+            let label_expression = get_new_label();
             let label_true = get_new_label();
             let label_later = get_new_label();
 
-            let nop_expr = AssemblerInstruction::Nop(Some(label_expr.clone()));
+            let nop_expr = AssemblerInstruction::Nop(Some(label_expression.clone()));
             let load_op = AssemblerInstruction::Move(Move::new(
                 "movl".to_string(),
                 expression.temporary(),
@@ -990,7 +1048,7 @@ impl WhileCommand {
             ));
             let cbr = AssemblerInstruction::Jump(Jump::new(label_later.clone()));
             let true_nop = AssemblerInstruction::Nop(Some(label_true));
-            let jump_back = AssemblerInstruction::Jump(Jump::new(label_expr));
+            let jump_back = AssemblerInstruction::Jump(Jump::new(label_expression));
             let later_nop = AssemblerInstruction::Nop(Some(label_later));
 
             let mut code = vec![];
@@ -1125,7 +1183,7 @@ impl Division {
         child_left: Box<ASTNode>,
         child_right: Box<ASTNode>,
     ) -> Result<Self, ParsingError> {
-        let ty = try_type_inference(child_left.get_type(), child_right.get_type())?;
+        let variable_type = try_type_inference(child_left.get_type(), child_right.get_type())?;
         let temporary = get_new_temporary()?;
 
         let code = {
@@ -1164,7 +1222,104 @@ impl Division {
             child_left,
             child_right,
             next: Box::new(node),
-            variable_type: ty,
+            variable_type,
+            temporary,
+            code,
+        })
+    }
+
+    pub fn add_next(&mut self, next: Box<ASTNode>) {
+        self.next = next.clone();
+        self.code.extend(next.code());
+    }
+
+    pub fn get_temporary_vec(&self) -> Vec<String> {
+        let mut temps = vec![self.temporary.clone()];
+        temps.extend(self.next.get_temporary_vecs());
+        temps
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct CompareOperation {
+    pub span: Span,
+    pub child_left: Box<ASTNode>,
+    pub child_right: Box<ASTNode>,
+    pub next: Box<ASTNode>,
+    compare_type: Type,
+    temporary: String,
+    code: Vec<AssemblerInstruction>,
+}
+impl CompareOperation {
+    pub fn new(
+        span: Span,
+        child_left: Box<ASTNode>,
+        child_right: Box<ASTNode>,
+    ) -> Result<Self, ParsingError> {
+        let compare_type = try_type_inference(child_left.get_type(), child_right.get_type())?;
+        let temporary = get_new_temporary()?;
+
+        let code = {
+            let label_true = get_new_label();
+            let label_false = get_new_label();
+            let label_end = get_new_label();
+
+            let load_eax = AssemblerInstruction::Move(Move::new(
+                "movl".to_string(),
+                child_left.temporary(),
+                "%eax".to_string(),
+            ));
+            let cmp_inst = AssemblerInstruction::CompareRegister(CompareRegister::new(
+                child_right.temporary(),
+                "%eax".to_string(),
+            ));
+            let jcond = AssemblerInstruction::Compare(CompareInstruction::new(
+                "".to_string(),
+                label_true.clone(),
+            ));
+
+            let cbr_inst = AssemblerInstruction::Jump(Jump::new(label_false.clone()));
+
+            let load_true = AssemblerInstruction::MoveImediate(OneInputOneOutput::new(
+                "movl".to_string(),
+                "$1".to_string(),
+                temporary.clone(),
+            ))
+            .add_label(label_true);
+
+            let jump_later = AssemblerInstruction::Jump(Jump::new(label_end.clone()));
+
+            let load_false = AssemblerInstruction::MoveImediate(OneInputOneOutput::new(
+                "movl".to_string(),
+                "$0".to_string(),
+                temporary.clone(),
+            ))
+            .add_label(label_false);
+
+            let nop_inst = AssemblerInstruction::Nop(Some(label_end));
+
+            let mut code = vec![];
+
+            code.extend(child_left.code());
+            code.extend(child_right.code());
+            code.push(load_eax);
+            code.push(cmp_inst);
+            code.push(jcond);
+            code.push(cbr_inst);
+            code.push(load_true);
+            code.push(jump_later);
+            code.push(load_false);
+            code.push(nop_inst);
+            code
+        };
+
+        let node = ASTNode::None(Vec::new());
+        Ok(Self {
+            span,
+            child_left,
+            child_right,
+            next: Box::new(node),
+            compare_type,
             temporary,
             code,
         })
@@ -1395,10 +1550,10 @@ impl Identifier {
 
     pub fn generate_load(
         &mut self,
-        _lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
+        lexer: &dyn NonStreamingLexer<DefaultLexerTypes>,
     ) -> Result<(), ParsingError> {
         {
-            let symbol = get_symbol(self.span, _lexer)?;
+            let symbol = get_symbol(self.span, lexer)?;
             let val = get_symbol_value(&symbol);
             self.temporary = get_new_temporary()?;
             self.code = vec![AssemblerInstruction::Move(Move::new(

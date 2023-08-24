@@ -65,11 +65,9 @@ function -> Result<ASTNode, ParsingError>:
 
                 add_name_to_last_symbol_table(name.clone());
 
-                let arguments = $2?;                
-                let function_label = get_new_label();
+                let arguments = $2?;                    
 
-
-                let entry = SymbolEntry::Function(FunctionSymbol::new(name, function_type, $span, $lexer, arguments, function_label));
+                let entry = SymbolEntry::Function(FunctionSymbol::new(name.clone(), function_type, $span, $lexer, arguments, name));
                 add_symbol(entry)?;
                 let command = Box::new($5?);
                 let node = FunctionDeclaration::new($span, command, identifier.span()?, $lexer)?;
@@ -247,7 +245,7 @@ expression -> Result<ASTNode, ParsingError>:
         expression "TK_OC_OR" expression2 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::OrExpression(node))
         } |
         expression2  { $1 } ;
@@ -256,7 +254,7 @@ expression2-> Result<ASTNode, ParsingError>:
         expression2 "TK_OC_AND" expression3 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::AndExpression(node))
         } |
         expression3  { $1 } ;
@@ -265,13 +263,13 @@ expression3->  Result<ASTNode, ParsingError>:
         expression3 "TK_OC_EQ" expression4 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::EqualExpression(node))
         } |
         expression3 "TK_OC_NE" expression4 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::NotEqualExpression(node))
         } |
         expression4  { $1 } ;
@@ -280,25 +278,25 @@ expression4-> Result<ASTNode, ParsingError>:
         expression4 '<' expression5 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::LessThanExpression(node))
          } |
         expression4 '>' expression5 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::GreaterThanExpression(node))
          } |
         expression4 "TK_OC_LE" expression5 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::LessEqualExpression(node))
          } |
         expression4 "TK_OC_GE" expression5 {
                 let child_left = Box::new($1?);
                 let child_right = Box::new($3?);
-                let node = BinaryOperation::new($span, child_left, child_right)?;
+                let node = CompareOperation::new($span, child_left, child_right)?;
                 Ok(ASTNode::GreaterEqualExpression(node))
          } |
         expression5  { $1 } ;
@@ -407,13 +405,13 @@ type-> Result<Type, ParsingError>:
 
 scope_begin_function -> Result<(), ParsingError>:
         {
-                new_scope(ScopeType::Inner);
+                new_scope(ScopeType::Function);
                 Ok(())
         };
 
 scope_begin_inner -> Result<(), ParsingError>:
         {
-                new_scope(ScopeType::Function);
+                new_scope(ScopeType::Inner);
                 Ok(())
         };
 
@@ -435,6 +433,7 @@ use etapa6::{ast::{
         UnaryOperation,
         IfCommand,
         WhileCommand,
+        CompareOperation,
         FunctionDeclaration,   
         LiteralInt,
         LiteralFloat,      
